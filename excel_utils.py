@@ -9,7 +9,7 @@ def format_table(
     sheet_name: str,
     start_col: int,
     start_row: int,
-    table_name: str | None = None,
+    table_name: str = None,
 ) -> None:
     '''
     writes a given table and formats it as a table

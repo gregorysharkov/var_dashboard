@@ -19,23 +19,30 @@ def generate_dashboard_sheet(
         sheet_name='Dashboard',
         start_col=1,
         start_row=4,
-        table_name='VaR_structured_position_top10'
+        table_name='VaR_structured_position_top10'.lower()
     )
-    VaR_structured_position_top10.to_excel(
-        writer, sheet_name="Dashboard", startcol=1, startrow=4
+    eu.format_table(
+        data=VaR_structured_position_bottom10,
+        writer=writer,
+        sheet_name="Dashboard",
+        start_col=9,
+        start_row=4,
+        table_name='VaR_structured_position_bottom10'.lower(),
     )
-    VaR_structured_position_bottom10.to_excel(
-        writer, sheet_name="Dashboard", startcol=9, startrow=4
-    )
+    # VaR_structured_position_top10.to_excel(
+    #     writer, sheet_name="Dashboard", startcol=1, startrow=4
+    # )
+    # VaR_structured_position_bottom10.to_excel(
+    #     writer, sheet_name="Dashboard", startcol=9, startrow=4
+    # )
     # Excel equivalents ["Dashboard; "Fund Exposure %" and "Fund Exposure $" tbl]
     fund_exp_pct_dashboard.set_index(["Fund Exposures %"], inplace=True)
-    fund_exp_usd_dashboard.set_index(["Fund Exposures $"], inplace=True)
-
     eu.format_table(fund_exp_pct_dashboard, writer,
                     'Dashboard', 1, 16, 'fund_exp_pct_dashboard')
     # fund_exp_pct_dashboard.to_excel(
     #     writer, sheet_name="Dashboard", startcol=1, startrow=16
     # )
+    fund_exp_usd_dashboard.set_index(["Fund Exposures $"], inplace=True)
     fund_exp_usd_dashboard.to_excel(
         writer, sheet_name="Dashboard", startcol=9, startrow=16
     )
