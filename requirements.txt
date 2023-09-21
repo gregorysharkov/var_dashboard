@@ -1,0 +1,8 @@
+# python 3.11
+pandas
+pandas_market_calendars
+scipy
+pyyaml
+ydata-profiling
+matplotlib
+xlsxwriter
