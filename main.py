@@ -6,11 +6,11 @@ from datetime import datetime
 import pandas as pd
 import pandas_market_calendars as mcal
 
-import excel_utils as eu
 import Exposures
 import Factors
 import pnl_stats
 import VaR
+from src.report_items.dashboard_sheet import generate_dashboard_sheet
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -375,90 +375,21 @@ if __name__ == "__main__":
     # Excel equivalents ["Dashboard; "Top 10 VaR Contributors" and "Top 10 VaR
     # Diversifiers" tbl]
 
-    def create_dashboard_sheet(
-            writer, 
-    ) -> None:
-        '''formats sheets on the '''
-    eu.format_table(
-        data=VaR_structured_position_top10,
-        writer=writer,
-        sheet_name='Dashboard',
-        start_col=1,
-        start_row=4,
-        table_name='VaR_structured_position_top10'
-    )
-    VaR_structured_position_top10.to_excel(
-        writer, sheet_name="Dashboard", startcol=1, startrow=4
-    )
-    VaR_structured_position_bottom10.to_excel(
-        writer, sheet_name="Dashboard", startcol=9, startrow=4
-    )
-    # Excel equivalents ["Dashboard; "Fund Exposure %" and "Fund Exposure $" tbl]
-    fund_exp_pct_dashboard.set_index(["Fund Exposures %"], inplace=True)
-    fund_exp_usd_dashboard.set_index(["Fund Exposures $"], inplace=True)
-
-    eu.format_table(fund_exp_pct_dashboard, writer,
-                    'Dashboard', 1, 16, 'fund_exp_pct_dashboard')
-    # fund_exp_pct_dashboard.to_excel(
-    #     writer, sheet_name="Dashboard", startcol=1, startrow=16
-    # )
-    fund_exp_usd_dashboard.to_excel(
-        writer, sheet_name="Dashboard", startcol=9, startrow=16
-    )
-    # Excel equivalents ["Dashboard; "Sector Exposure" tbl]
-    sector_exposure_df.to_excel(
+    generate_dashboard_sheet(
         writer,
-        sheet_name="Dashboard",
-        startcol=1,
-        startrow=16 + len(fund_exp_pct_dashboard) + 2,
-    )
-    # Excel equivalents ["Dashboard; "Macro Factor Sensitivity" tbl]
-    macro_factor_decomp_df.to_excel(
-        writer,
-        sheet_name="Dashboard",
-        startcol=1,
-        startrow=16 + len(fund_exp_pct_dashboard) +
-        len(sector_exposure_df) + (2 * 2),
-    )
-    # Excel equivalents ["Dashboard; "Sector Sensitivity" tbl]
-    sector_factor_decomp_df.to_excel(
-        writer,
-        sheet_name="Dashboard",
-        startcol=1,
-        startrow=16
-        + len(fund_exp_pct_dashboard)
-        + len(sector_exposure_df)
-        + len(macro_factor_decomp_df)
-        + (3 * 2),
-    )
-    # Excel equivalent ["Dashboard"; "Greek Sensitivity" tbl]
-    greek_sensitivities_calc.to_excel(
-        writer,
-        sheet_name="Dashboard",
-        startcol=1,
-        startrow=16
-        + len(fund_exp_pct_dashboard)
-        + len(sector_exposure_df)
-        + len(macro_factor_decomp_df)
-        + len(sector_factor_decomp_df)
-        + (4 * 2),
-    )
-    # Excel equivalent ["Dashboard"; "Option Premium" tbl]
-    options_premium_calc.to_excel(
-        writer,
-        sheet_name="Dashboard",
-        startcol=9,
-        startrow=16
-        + len(fund_exp_pct_dashboard)
-        + len(sector_exposure_df)
-        + len(macro_factor_decomp_df)
-        + len(sector_factor_decomp_df)
-        + (4 * 2),
+        VaR_structured_position_top10,
+        VaR_structured_position_bottom10,
+        sector_exposure_df,
+        options_premium_calc,
+        greek_sensitivities_calc,
+        macro_factor_decomp_df,
+        sector_factor_decomp_df,
+        fund_exp_pct_dashboard,
+        fund_exp_usd_dashboard
     )
 
     # 1.g., build rest of workbook beyond dashboard
     # Excel equivalents ["PNLReport"]
-    generate_report(...)
     # return_analysis_stats.to_excel(
     #     writer, sheet_name="PNLReport", startcol=1, startrow=19
     # )
@@ -680,17 +611,3 @@ if __name__ == "__main__":
     writer.close()
     LOGGER.info("assess & interpret")
     LOGGER.info("assess & interpret")
-
-def generate_report_data() -> Dictionary[str, pd.DataFrame]:
-    ...
-
-
-def generate_report(report_data: Dict, settings: Dict):
-    ...
-
-
-def generate_blank_report():
-
-def generate_dashboard_sheet(...):
-    generate_table_a()
-    generate_table_b()
