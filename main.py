@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 import pandas_market_calendars as mcal
+import xlsxwriter
 
 import Exposures
 import Factors
@@ -125,8 +126,9 @@ if __name__ == "__main__":
 
     # 1.b. VaR functions
     # Create a Pandas Excel writer using XlsxWriter as the engine.
-    writer = pd.ExcelWriter(
-        f"output/risk_report_{now}.xlsx", engine="xlsxwriter")
+    # pd.ExcelWriter
+    writer = xlsxwriter.Workbook(
+        f"output/risk_report_{now}.xlsx", {'constant_memory': False})
     # Excel equivalent ["FactorCorrels"]
     matrix_correlation = VaR.matrix_correlation(factor_prices, factor)
     matrix_cov = VaR.matrix_cov(factor_prices)
@@ -182,26 +184,26 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
-        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    )
-    stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    (
-        stress_test_price_vol_calc,
-        stress_test_price_vol_exposure_calc,
-    ) = VaR.filter_stress_test_price_vol(
-        filters_dict, factor_prices, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    stress_test_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_calc, position, price_vol_shock_range
-    )
-    stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    )
+    # stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
+    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    # )
+    # stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    # (
+    #     stress_test_price_vol_calc,
+    #     stress_test_price_vol_exposure_calc,
+    # ) = VaR.filter_stress_test_price_vol(
+    #     filters_dict, factor_prices, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    # stress_test_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_calc, position, price_vol_shock_range
+    # )
+    # stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    # )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -377,15 +379,17 @@ if __name__ == "__main__":
 
     generate_dashboard_sheet(
         writer,
-        VaR_structured_position_top10,
-        VaR_structured_position_bottom10,
-        sector_exposure_df,
-        options_premium_calc,
-        greek_sensitivities_calc,
-        macro_factor_decomp_df,
-        sector_factor_decomp_df,
-        fund_exp_pct_dashboard,
-        fund_exp_usd_dashboard
+        data={
+            'var_structured_position_top10': VaR_structured_position_top10,
+            'var_structured_position_bottom10': VaR_structured_position_bottom10,
+            'sector_exposure_df': sector_exposure_df,
+            'options_premium_calc': options_premium_calc,
+            'greek_sensitivities_calc': greek_sensitivities_calc,
+            'macro_factor_decomp_df': macro_factor_decomp_df,
+            'sector_factor_decomp_df': sector_factor_decomp_df,
+            'fund_exp_pct_dashboard': fund_exp_pct_dashboard,
+            'fund_exp_usd_dashboard': fund_exp_usd_dashboard,
+        }
     )
 
     # 1.g., build rest of workbook beyond dashboard
@@ -608,6 +612,6 @@ if __name__ == "__main__":
     # matrix_correlation.to_excel(
     #     writer, sheet_name="FactorCorrels", startcol=0, startrow=0
     # )
+
     writer.close()
-    LOGGER.info("assess & interpret")
     LOGGER.info("assess & interpret")
