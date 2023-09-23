@@ -48,6 +48,24 @@ def insert_table(
     )
 
 
+def apply_conditional_formatting(worksheet, report_table) -> None:
+    '''applies conditional formatting to a specific table'''
+
+    start_col, start_row = report_table.range[0]
+    end_col, end_row = report_table.range[1]  # type: ignore
+
+    worksheet.conditional_format(
+        start_row, start_col, end_row, end_col,
+        {
+            'type': '3_color_scale',
+            'min_color': 'red',
+            'mid_value': 0,
+            'mid_color': 'white',
+            'max_color': 'green',
+        }
+    )
+
+
 def _set_column_types(report_table):
     '''generates a dictionary of formats'''
     return_list = []

@@ -12,6 +12,7 @@ import Factors
 import pnl_stats
 import VaR
 from src.report_items.dashboard_sheet import generate_dashboard_sheet
+from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
 
@@ -410,15 +411,12 @@ if __name__ == "__main__":
             'return_analysis_stats': return_analysis_stats,
         }
     )
-    # return_analysis_stats.to_excel(
-    #     writer, sheet_name="PNLReport", startcol=1, startrow=19
-    # )
-    # comparative_analysis_stats.to_excel(
-    #     writer, sheet_name="PNLReport", startcol=7, startrow=19
-    # )
-    # # Excel equivalent ["Factor Heat Map"]
-    # factor_heat_map.to_excel(
-    #     writer, sheet_name="FactorHeatMap", startcol=0, startrow=0)
+    generate_factor_heatmap_sheet(
+        writer,
+        data_dict={
+            'factor_heatmap': factor_heat_map,
+        }
+    )
     # # Excel equivalent ["FactorExposures"; "Macro Factor Sensitivity" tbl & "Sector
     # # Sensitivities" tbl]
     # macro_factor_decomp_df.to_excel(
