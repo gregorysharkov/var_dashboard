@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Any, List, Optional, Tuple
 
 import pandas as pd
@@ -14,7 +15,7 @@ class ReportItem:
     snap_mode: Optional[SnapType] = None
     margin: Optional[int] = 2
 
-    @property
+    @cached_property
     def position(self) -> Tuple[int, int]:
         if self.initial_position:
             return self.initial_position

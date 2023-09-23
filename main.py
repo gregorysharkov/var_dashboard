@@ -12,6 +12,7 @@ import Factors
 import pnl_stats
 import VaR
 from src.report_items.dashboard_sheet import generate_dashboard_sheet
+from src.report_items.factor_exposures import generate_factor_exposures_sheet
 from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
@@ -417,45 +418,16 @@ if __name__ == "__main__":
             'factor_heatmap': factor_heat_map,
         }
     )
-    # # Excel equivalent ["FactorExposures"; "Macro Factor Sensitivity" tbl & "Sector
-    # # Sensitivities" tbl]
-    # macro_factor_decomp_df.to_excel(
-    #     writer, sheet_name="FactorExposures", startcol=1, startrow=4
-    # )
-    # sector_factor_decomp_df.to_excel(
-    #     writer,
-    #     sheet_name="FactorExposures",
-    #     startcol=1,
-    #     startrow=(4 + len(macro_factor_decomp_df) + 3),
-    # )
+    generate_factor_exposures_sheet(
+        writer,
+        data={
+            'macro_factor_decomp_df': macro_factor_decomp_df,
+            'sector_factor_decomp_df': sector_factor_decomp_df,
+            'risk_factor_exposure_top_n_list': risk_factor_exposure_top_N_list,
+            'risk_factor_exposure_bottom_n_list': risk_factor_exposure_bottom_N_list,
+        }
+    )
 
-    # startrow = 4 + len(macro_factor_decomp_df) + \
-    #     len(sector_factor_decomp_df) + (2 * 3)
-    # for ix in range(0, len(risk_factor_exposure_top_N_list), 2):
-    #     risk_factor_exposure_top_N_list[ix].to_excel(
-    #         writer,
-    #         sheet_name="FactorExposures",
-    #         startcol=1,
-    #         startrow=startrow + (6 * ix),
-    #     )
-    #     risk_factor_exposure_bottom_N_list[ix].to_excel(
-    #         writer,
-    #         sheet_name="FactorExposures",
-    #         startcol=5,
-    #         startrow=startrow + (6 * ix),
-    #     )
-    #     risk_factor_exposure_top_N_list[ix + 1].to_excel(
-    #         writer,
-    #         sheet_name="FactorExposures",
-    #         startcol=9,
-    #         startrow=startrow + (6 * ix),
-    #     )
-    #     risk_factor_exposure_bottom_N_list[ix + 1].to_excel(
-    #         writer,
-    #         sheet_name="FactorExposures",
-    #         startcol=13,
-    #         startrow=startrow + (6 * ix),
-    #     )
     # # Excel equivalent ["ExpReport"]
     # strat_exposure_df.to_excel(
     #     writer, sheet_name="ExpReport", startcol=1, startrow=4)

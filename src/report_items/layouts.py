@@ -69,7 +69,14 @@ class DashboardLayout:
 
 
 class NarrowDashboardLayout(DashboardLayout):
-    SIDE_COLUMNS = ['A', 'Q', ]
+    SIDE_COLUMNS = ['A', 'Q']
     CATEGORY_COLUMNS = ['B', 'G']
     NUMERIC_COLUMNS = ['C', 'D', 'E', 'H', 'I', 'J']
     MIDDLE_COLUMNS = ['K', ]
+
+
+class WideDashboardLayout(DashboardLayout):
+    '''contains 4 category columns'''
+    CATEGORY_COLUMNS = ['B', 'F', 'J', 'N']
+    MIDDLE_COLUMNS = ['E', 'I', 'M']
+    NUMERIC_COLUMNS = ['C', 'D', 'G', 'H', 'K', 'L', 'O', 'P']

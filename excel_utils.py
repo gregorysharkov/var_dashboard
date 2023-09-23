@@ -58,10 +58,10 @@ def apply_conditional_formatting(worksheet, report_table) -> None:
         start_row, start_col, end_row, end_col,
         {
             'type': '3_color_scale',
-            'min_color': 'red',
+            'min_color': '#F8696B',
             'mid_value': 0,
-            'mid_color': 'white',
-            'max_color': 'green',
+            'mid_color': '#FCFCFF',
+            'max_color': '#63BE7B',
         }
     )
 
