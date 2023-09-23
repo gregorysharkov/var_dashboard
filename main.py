@@ -12,6 +12,8 @@ import Factors
 import pnl_stats
 import VaR
 from src.report_items.dashboard_sheet import generate_dashboard_sheet
+from src.report_items.pnldata_sheet import generate_pnldata_sheet
+from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -128,7 +130,7 @@ if __name__ == "__main__":
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     # pd.ExcelWriter
     writer = xlsxwriter.Workbook(
-        f"output/risk_report_{now}.xlsx", {'constant_memory': False})
+        f"output/risk_report_{now}.xlsx", {'constant_memory': False, 'nan_inf_to_errors': True})
     # Excel equivalent ["FactorCorrels"]
     matrix_correlation = VaR.matrix_correlation(factor_prices, factor)
     matrix_cov = VaR.matrix_cov(factor_prices)
@@ -394,6 +396,20 @@ if __name__ == "__main__":
 
     # 1.g., build rest of workbook beyond dashboard
     # Excel equivalents ["PNLReport"]
+    generate_pnldata_sheet(
+        writer,
+        data_dict={
+            'aum_clean': AUM_clean,
+        }
+    )
+
+    generate_pnlreport_sheet(
+        writer,
+        data_dict={
+            'comparative_analysis_stats': comparative_analysis_stats,
+            'return_analysis_stats': return_analysis_stats,
+        }
+    )
     # return_analysis_stats.to_excel(
     #     writer, sheet_name="PNLReport", startcol=1, startrow=19
     # )

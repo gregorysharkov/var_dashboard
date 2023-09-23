@@ -1,5 +1,14 @@
 from typing import Dict
 
+FONT_SIZE = 10
+DPI = 92
+
+UNITS_TO_PIXELS = {
+    8: 61,
+    12: 89,
+    26: 187,
+}
+
 
 class DashboardLayout:
     '''class stores information about page layout'''
@@ -7,7 +16,7 @@ class DashboardLayout:
     CATEGORY_COLUMNS_WIDTH = 26
     SIDE_COLUMNS_WIDTH = 8
     MIDDLE_COLUMNS_WIDTH = 8
-    PIXELS_PER_WIDTH = 80/12
+    PIXELS_PER_WIDTH = 95 / 12  # FONT_SIZE * DPI / 72
     PIXELS_PER_HEIGHT = 20
     TOTAL_COLS = 15
 
@@ -18,7 +27,7 @@ class DashboardLayout:
     SIDE_COLUMNS = ['A', 'Q', ]
 
     @property
-    def widths(self) -> Dict[str, int]:
+    def widths(self) -> Dict[str, float]:
         '''returns a sorted dictionary of column length'''
 
         return_dict = {}
@@ -38,7 +47,6 @@ class DashboardLayout:
             col: self.NUMERIC_COLUMNS_WIDTH for col in self.NUMERIC_COLUMNS
         })
 
-        # type: ignore
         return {key: return_dict.get(key) for key in sorted(return_dict.keys())}
 
     def pixels_to_right_edge(self, start_col: int) -> float:
@@ -46,10 +54,22 @@ class DashboardLayout:
         returns number of pixels till the right
         border starting from the n'th column
         '''
+        width_in_units = list(self.widths.values())[start_col:-1]
+        widths_in_pixels = [
+            UNITS_TO_PIXELS.get(x, self.PIXELS_PER_WIDTH)
+            for x in width_in_units
+        ]
 
-        return sum(list(self.widths.values())[start_col:]) * self.PIXELS_PER_WIDTH
+        return sum(widths_in_pixels)
 
     def pixels_to_bottom(self, n_row: int) -> float:
         '''returns number of pixels for a given number of rows'''
 
         return n_row * self.PIXELS_PER_HEIGHT
+
+
+class NarrowDashboardLayout(DashboardLayout):
+    SIDE_COLUMNS = ['A', 'Q', ]
+    CATEGORY_COLUMNS = ['B', 'G']
+    NUMERIC_COLUMNS = ['C', 'D', 'E', 'H', 'I', 'J']
+    MIDDLE_COLUMNS = ['K', ]

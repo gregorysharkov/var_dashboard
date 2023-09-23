@@ -1,4 +1,3 @@
-from abc import ABC, abstractproperty
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
 
@@ -39,6 +38,7 @@ class ReportTable(ReportItem):
     '''
     data: pd.DataFrame = None  # type: ignore
     values_format: Any = 'currency'
+    date_format: Any = None
     table_name: str = 'some table'
 
     @property
@@ -78,6 +78,8 @@ class WorksheetChart(ReportItem):
     columns: Optional[List[str]] = None
     categories_name: str = 'Some table'
     page_layout: Optional[Any] = None
+    initial_rows: int = 15
+    title: str = None
 
     @property
     def size(self) -> Tuple[float, float]:
@@ -96,5 +98,5 @@ class WorksheetChart(ReportItem):
             return (width, height)
 
         height = self.page_layout.pixels_to_bottom(
-            len(self.snap_element.data)+1)
+            len(self.snap_element.data) + 1)
         return (width, height)

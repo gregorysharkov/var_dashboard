@@ -11,6 +11,7 @@ DASHED_BORDER_INDEX = 4
 
 CURRENCY_FORMAT = '"$"# ##0_);[Red]("$"# ##0)'
 PERCENTAGE_FORMAT = '# ##0.00%_);[Red](# ##0.00%)'
+DATE_FORMAT = 'mm/dd/yy'
 
 
 def add_header_style(workbook) -> Any:
@@ -70,3 +71,9 @@ def add_percentage_format(workbook) -> Any:
     '''adds currency format'''
 
     return _add_num_format(workbook, PERCENTAGE_FORMAT)
+
+
+def add_date_format(workbook) -> Any:
+    '''adds date format'''
+
+    return _add_num_format(workbook, DATE_FORMAT)

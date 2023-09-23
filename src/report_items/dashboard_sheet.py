@@ -1,12 +1,13 @@
-
 from typing import Dict
 
 import excel_utils as eu
+from src.report_items.format_dashboard_worksheet import format_dashboard_worksheet
+from src.report_items.insert_header import insert_header
+from src.report_items.set_up_workbook import set_up_workbook
 
-from ..report_elements import ReportItem, ReportTable, WorksheetChart
+from ..report_elements import ReportTable, WorksheetChart
 from ..snap_operations import SnapType
 from .layouts import DashboardLayout
-from .styles_init import set_styles
 
 SHEET_NAME = 'Dashboard'
 
@@ -19,39 +20,14 @@ def generate_dashboard_sheet(
 
     layout = DashboardLayout()
     styles, worksheet = set_up_workbook(writer, sheet_name=SHEET_NAME)
-    insert_header(worksheet, styles)
-    report_tables = insert_tables(data, styles, worksheet)
+    insert_header(worksheet, styles, layout)
+    report_tables = insert_dashboard_tables(data, styles, worksheet)
+    _charts = insert_dashboard_charts(writer, layout, worksheet, report_tables)
 
-    table_name = 'sector_exposure_df'
-    sector_exposure_chart = WorksheetChart(
-        table_name=table_name,
-        columns=['Long', 'Short'],
-        categories_name='Sector Exposure',
-        snap_element=report_tables.get(table_name),
-        snap_mode=SnapType.RIGHT,
-        page_layout=layout,
-        margin=1,
-    )
-    eu.insert_chart(writer, worksheet, sector_exposure_chart)
-    format_worksheet(worksheet, layout)
+    format_dashboard_worksheet(worksheet, layout)
 
 
-def set_up_workbook(workbook, sheet_name: str):
-
-    styles = set_styles(workbook)
-    if sheet_name not in workbook.sheetnames:
-        workbook.add_worksheet(sheet_name)
-
-    worksheet = workbook.get_worksheet_by_name(sheet_name)
-    return styles, worksheet
-
-
-def insert_header(worksheet, styles) -> None:
-    '''inserts header to the worksheet'''
-    pass
-
-
-def insert_tables(data, styles, worksheet) -> Dict[str, ReportTable]:
+def insert_dashboard_tables(data, styles, worksheet) -> Dict[str, ReportTable]:
     return_dict = {}
     table_name = 'var_structured_position_top10'
     var_top_10 = ReportTable(
@@ -161,17 +137,46 @@ def insert_tables(data, styles, worksheet) -> Dict[str, ReportTable]:
     return return_dict
 
 
-def format_worksheet(worksheet, layout) -> None:
-    for col in layout.NUMERIC_COLUMNS:
-        worksheet.set_column(f'{col}:{col}', layout.NUMERIC_COLUMNS_WIDTH)
+def insert_dashboard_charts(writer, layout, worksheet, report_tables):
+    charts = {}
+    table_name = 'sector_exposure_df'
+    sector_exposure_chart = WorksheetChart(
+        table_name=table_name,
+        columns=['Long', 'Short'],
+        categories_name='Sector Exposure',
+        snap_element=report_tables.get(table_name),
+        snap_mode=SnapType.RIGHT,
+        page_layout=layout,
+        margin=1,
+    )
+    eu.insert_stacked_columns_chart(writer, worksheet, sector_exposure_chart)
+    charts.update({table_name: sector_exposure_chart})
 
-    for col in layout.CATEGORY_COLUMNS:
-        worksheet.set_column(f'{col}:{col}', layout.CATEGORY_COLUMNS_WIDTH)
+    table_name = 'macro_factor_decomp_df'
+    macro_factor_sensitivity_chart = WorksheetChart(
+        table_name=table_name,
+        columns=['FactorExp', 'FactorVol'],
+        categories_name='Macro Factor Sensitivity',
+        snap_element=report_tables.get(table_name),
+        snap_mode=SnapType.RIGHT,
+        page_layout=layout,
+        margin=1,
+    )
+    eu.insert_stacked_columns_chart(
+        writer, worksheet, macro_factor_sensitivity_chart)
+    charts.update({table_name: macro_factor_sensitivity_chart})
 
-    for col in layout.SIDE_COLUMNS:
-        worksheet.set_column(f'{col}:{col}', layout.SIDE_COLUMNS_WIDTH)
-
-    for col in layout.MIDDLE_COLUMNS:
-        worksheet.set_column(f'{col}:{col}', layout.MIDDLE_COLUMNS_WIDTH)
-
-    worksheet.set_zoom(100)
+    table_name = 'sector_factor_decomp_df'
+    sector_sensitivity_chart = WorksheetChart(
+        table_name=table_name,
+        columns=['FactorExp', 'FactorVol'],
+        categories_name='Sector Sensitivities',
+        snap_element=report_tables.get(table_name),
+        snap_mode=SnapType.RIGHT,
+        page_layout=layout,
+        margin=1,
+    )
+    eu.insert_stacked_columns_chart(
+        writer, worksheet, sector_sensitivity_chart)
+    charts.update({table_name: sector_sensitivity_chart})
+    return charts
