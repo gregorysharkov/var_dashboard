@@ -347,6 +347,7 @@ if __name__ == "__main__":
             ],
         }
     )
+
     fund_exp_usd_dashboard = pd.DataFrame(
         {
             "Fund Exposures $": [
@@ -378,8 +379,6 @@ if __name__ == "__main__":
             ],
         }
     )
-    # Excel equivalents ["Dashboard; "Top 10 VaR Contributors" and "Top 10 VaR
-    # Diversifiers" tbl]
 
     generate_dashboard_sheet(
         writer,
@@ -397,7 +396,6 @@ if __name__ == "__main__":
     )
 
     # 1.g., build rest of workbook beyond dashboard
-    # Excel equivalents ["PNLReport"]
     generate_pnldata_sheet(
         writer,
         data_dict={
