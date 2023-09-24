@@ -87,3 +87,11 @@ class ExposureDashboardLayout(DashboardLayout):
     CATEGORY_COLUMNS = ['B', 'H', ]
     MIDDLE_COLUMNS = ['G', ]
     NUMERIC_COLUMNS = ['C', 'D', 'E', 'F', 'I', 'J', 'K', 'L', ]
+
+
+class StressDashboardLayout(DashboardLayout):
+    SIDE_COLUMNS = ['A', 'B', ]
+    CATEGORY_COLUMNS = []
+    MIDDLE_COLUMNS = []
+    NUMERIC_COLUMNS = ['C', 'D', 'E', 'F',
+                       'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N']

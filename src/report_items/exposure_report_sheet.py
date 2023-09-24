@@ -23,7 +23,7 @@ def generate_exp_report_sheet(writer, data: List[Dict]) -> None:
     report_tables = []
     report_charts = []
 
-    first_row_tables = rgo.init_report_pair(
+    first_row_tables = rgo.init_report_group(
         styles=styles,
         table_names=['strategy_exposure', 'strategy_beta_exposure'],
         tables=[

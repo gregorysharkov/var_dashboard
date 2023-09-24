@@ -9,6 +9,36 @@ from xlsxwriter import worksheet
 from src.report_elements import ReportTable, WorksheetChart
 
 
+def insert_text(worksheet, table, text) -> None:
+    '''adds text 2 rows above the given cell'''
+    col, row = table.position
+    row -= 2
+    col -= 1
+    worksheet.write(row, col, text)
+
+
+def merge_above(worksheet, table: ReportTable, style, text) -> None:
+    '''inserts a text above the given element'''
+
+    (start_col, start_row), (end_col, end_row) = table.range
+
+    start_row -= 1
+
+    worksheet.merge_range(start_row, start_col-1,
+                          start_row, end_col-1, text, style)
+
+
+def merge_to_left(worksheet, table: ReportTable, style, text) -> None:
+    '''inserts merged range to the left'''
+
+    (start_col, start_row), (end_col, end_row) = table.range
+
+    worksheet.merge_range(start_row, start_col-1,
+                          end_row, start_col-1,
+                          text, style
+                          )
+
+
 def insert_table(
     worksheet: worksheet,  # type: ignore
     report_table: ReportTable,
@@ -30,6 +60,8 @@ def insert_table(
     else:
         report_table.data.reset_index(inplace=True)
 
+    report_table.data.columns = [str(col) for col in report_table.data.columns]
+
     start_col, start_row = report_table.range[0]
     end_col, end_row = report_table.range[1]  # type: ignore
     end_col = end_col - 1
@@ -48,20 +80,30 @@ def insert_table(
     )
 
 
-def apply_conditional_formatting(worksheet, report_table) -> None:
+def apply_conditional_formatting(
+    worksheet,
+    report_table,
+    include_first_col: bool = True
+) -> None:
     '''applies conditional formatting to a specific table'''
 
     start_col, start_row = report_table.range[0]
+    if include_first_col:
+        start_col = start_col + 1
     end_col, end_row = report_table.range[1]  # type: ignore
 
     worksheet.conditional_format(
         start_row, start_col, end_row, end_col,
         {
             'type': '3_color_scale',
-            'min_color': '#F8696B',
+            'min_value': -1,
+            'max_value': 1,
+            'max_type': 'max',
+            'min_color': 'red',
+            'mid_color': 'white',
+            'max_color': 'green',
+            'mid_type': 'num',
             'mid_value': 0,
-            'mid_color': '#FCFCFF',
-            'max_color': '#63BE7B',
         }
     )
 

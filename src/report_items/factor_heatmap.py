@@ -18,7 +18,7 @@ def generate_factor_heatmap_sheet(writer, data_dict: Dict[str, pd.DataFrame]) ->
     factor_heatmap = ReportTable(
         initial_position=(0, 0),
         data=data_dict.get('factor_heatmap'),  # type: ignore
-        values_format=styles.get('percentage'),
+        values_format=styles.get('black_percentage'),
         table_name='factor_heatmap',
     )
 

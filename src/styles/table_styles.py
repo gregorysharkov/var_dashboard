@@ -3,6 +3,7 @@ from typing import Any
 ALIGN_CENTER = 'center'
 DARK_BLUE_COLOR = '#44546A'
 WHIE_COLOR = '#FFFFFF'
+TABLE_HEADER_FILL_COLOR = '#4F81BD'
 TEXT_FONT = 'Arial'
 TEXT_SIZE = 8
 
@@ -11,6 +12,7 @@ DASHED_BORDER_INDEX = 4
 
 CURRENCY_FORMAT = '"$"# ##0_);[Red]("$"# ##0)'
 PERCENTAGE_FORMAT = '# ##0.00%_);[Red](# ##0.00%)'
+PERCENTAGE_NO_COLOR_FORMAT = '0.00%'
 DATE_FORMAT = 'mm/dd/yy'
 
 
@@ -53,6 +55,27 @@ def add_body_frame_format(workbook) -> Any:
     style.set_right_color(DARK_BLUE_COLOR)
 
 
+def add_merged_vertical(workbook) -> Any:
+    style = workbook.add_format({
+        'align': 'center',
+        'valign': 'center',
+        'font_color': 'white',
+        'bg_color': TABLE_HEADER_FILL_COLOR,
+        'rotation': 90,
+    })
+    return style
+
+
+def add_merged_horizontal(workbook) -> Any:
+    style = workbook.add_format({
+        'align': 'center',
+        'valign': 'center',
+        'font_color': 'white',
+        'bg_color': TABLE_HEADER_FILL_COLOR
+    })
+    return style
+
+
 def _add_num_format(workbook, format) -> Any:
     '''adds number format'''
 
@@ -71,6 +94,12 @@ def add_percentage_format(workbook) -> Any:
     '''adds currency format'''
 
     return _add_num_format(workbook, PERCENTAGE_FORMAT)
+
+
+def add_black_font_percentage_format(workbook):
+    '''percentage format for conditional formatting'''
+
+    return _add_num_format(workbook, PERCENTAGE_NO_COLOR_FORMAT)
 
 
 def add_date_format(workbook) -> Any:

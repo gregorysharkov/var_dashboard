@@ -7,7 +7,7 @@ from src.report_elements import ReportTable, WorksheetChart
 from src.snap_operations import SnapType
 
 
-def init_report_pair(
+def init_report_group(
     styles,
     table_names: List[str],
     tables: List[str],
@@ -17,9 +17,10 @@ def init_report_pair(
     global_snap_mode: Optional[SnapType] = SnapType.DOWN,
     global_margin: Optional[int] = 1,
     initial_position: Optional[int] = None,
+    format_name: str = 'percentage'
 ) -> List[ReportTable]:
     '''
-    initiates a pair of connected tables and snaps them tho the element
+    initiates a group of connected tables and snaps them tho the element
 
     Args:
         styles: collection of workbook styles
@@ -40,7 +41,7 @@ def init_report_pair(
     for table, data in zip(table_names, tables):
         report_item = ReportTable(
             data=data,  # type: ignore
-            values_format=styles.get('percentage'),
+            values_format=styles.get(format_name),
             table_name=table,
         )
         report_items.append(report_item)
@@ -91,7 +92,7 @@ def init_row(
     row_table_names = [
         f"factor_exposure_{row_number}_{i+1}" for i in range(len(row_data))]
 
-    row_group_tables = init_report_pair(
+    row_group_tables = init_report_group(
         global_snap_to=global_snap_to,
         global_snap_mode=SnapType.DOWN,
         global_margin=2,
