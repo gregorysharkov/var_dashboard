@@ -80,9 +80,10 @@ def _set_column_types(report_table):
     return return_list
 
 
-def insert_stacked_columns_chart(
+def insert_columns_chart(
     workbook, worksheet,
     worksheet_chart: WorksheetChart,
+    stacked: bool = True,
 ) -> None:
     '''
     inserts a chart to the worksheet
@@ -93,7 +94,7 @@ def insert_stacked_columns_chart(
         position: tuple with x and y coordinates
         size: tuple with width and height
     '''
-    chart, position = _create_stacked_chart(workbook, worksheet_chart)
+    chart, position = _create_column_chart(workbook, worksheet_chart, stacked)
     worksheet.insert_chart(row=position[1], col=position[0], chart=chart)
 
 
@@ -112,7 +113,7 @@ def insert_dual_axis_chart(workbook, worksheet, worksheet_chart_bars, worksheet_
 
     bar_chart, bar_chart_position = _set_series_bar_chart(
         workbook, worksheet_chart_bars)
-    series_chart, series_chart_position = _set_series_line_chart(
+    series_chart, _ = _set_series_line_chart(
         workbook, worksheet_chart_line)
     bar_chart.combine(series_chart)
     worksheet.insert_chart(
@@ -132,26 +133,26 @@ def _set_series_line_chart(workbook, worksheet_chart):
 def _set_series_bar_chart(workbook, worksheet_chart):
     '''adds time series chart'''
 
-    chart = _create_stacked_bar_chart_type(workbook)
+    chart = _create_bar_chart_type(workbook)
     _set_chart_title(worksheet_chart, chart)
     _add_bar_series(worksheet_chart, chart, _add_time_series)
     position = _format_chart(worksheet_chart, chart)
     return chart, position
 
 
-def _create_stacked_chart(workbook, worksheet_chart):
-    chart = _create_stacked_bar_chart_type(workbook)
+def _create_column_chart(workbook, worksheet_chart, stacked=True):
+    chart = _create_bar_chart_type(workbook, stacked)
     _set_chart_title(worksheet_chart, chart)
     position = _format_chart(worksheet_chart, chart)
     _add_bar_series(worksheet_chart, chart, _add_series)
     return chart, position
 
 
-def _create_stacked_bar_chart_type(workbook):
-    chart = workbook.add_chart({
-        'type': 'column',
-        'subtype': 'stacked',
-    })
+def _create_bar_chart_type(workbook, stacked=True):
+    chart_options = {'type': 'column', }
+    if stacked:
+        chart_options.update({'subtype': 'stacked', })
+    chart = workbook.add_chart(chart_options)
 
     return chart
 

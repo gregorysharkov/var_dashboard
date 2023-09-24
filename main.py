@@ -17,6 +17,7 @@ from src.report_items.factor_exposures import generate_factor_exposures_sheet
 from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
+from src.report_items.var_report_sheet import generate_var_report_sheet
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -453,6 +454,22 @@ if __name__ == "__main__":
         ]
     )
 
+    generate_var_report_sheet(
+        writer,
+        data=[
+            {
+                'var_top10': VaR_Top10,
+                'var_bottom10': VaR_Bottom10,
+            },
+            {
+                'Strat VaR': VaR_structured_strat,
+                'Sector VaR': VaR_structured_sector,
+                'Industry VaR': VaR_structured_industry,
+                'Country VaR': VaR_structured_country,
+                'MarketCap VaR': VaR_structured_mcap,
+            },
+        ]
+    )
     # # Excel equivalent ["VaRReport; "Strat VaR", "Sector VaR", "Industry VaR",
     # # "Country VaR", "Market Cap VaR" tbls]
     # # Position the dataframes in the worksheet.

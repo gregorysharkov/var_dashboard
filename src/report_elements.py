@@ -81,6 +81,7 @@ class WorksheetChart(ReportItem):
     page_layout: Optional[Any] = None
     initial_rows: int = 15
     title: str = None
+    stacked: bool = True
 
     @property
     def size(self) -> Tuple[float, float]:

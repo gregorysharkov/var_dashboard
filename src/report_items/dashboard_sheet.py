@@ -1,7 +1,8 @@
 from typing import Dict
 
 import excel_utils as eu
-from src.report_items.format_dashboard_worksheet import format_dashboard_worksheet
+from src.report_items.format_dashboard_worksheet import \
+    format_dashboard_worksheet
 from src.report_items.insert_header import insert_header
 from src.report_items.set_up_workbook import set_up_workbook
 
@@ -149,7 +150,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         page_layout=layout,
         margin=1,
     )
-    eu.insert_stacked_columns_chart(writer, worksheet, sector_exposure_chart)
+    eu.insert_columns_chart(writer, worksheet, sector_exposure_chart)
     charts.update({table_name: sector_exposure_chart})
 
     table_name = 'macro_factor_decomp_df'
@@ -162,7 +163,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         page_layout=layout,
         margin=1,
     )
-    eu.insert_stacked_columns_chart(
+    eu.insert_columns_chart(
         writer, worksheet, macro_factor_sensitivity_chart)
     charts.update({table_name: macro_factor_sensitivity_chart})
 
@@ -176,7 +177,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         page_layout=layout,
         margin=1,
     )
-    eu.insert_stacked_columns_chart(
+    eu.insert_columns_chart(
         writer, worksheet, sector_sensitivity_chart)
     charts.update({table_name: sector_sensitivity_chart})
     return charts

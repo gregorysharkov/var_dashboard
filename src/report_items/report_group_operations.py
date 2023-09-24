@@ -105,6 +105,39 @@ def init_row(
     return row_group_tables
 
 
+def init_table_with_chart(
+    styles,
+    layout,
+    global_snap_to: ReportTable,
+    table_name: str,
+    table_data: pd.DataFrame,
+    chart_columns: List[str],
+    next_row_margin: int,
+) -> Tuple[ReportTable, WorksheetChart]:
+    '''generates a table with a chart below'''
+
+    report_table = ReportTable(
+        data=table_data,
+        table_name=re.sub(r'\W', '_', table_name.lower()),
+        values_format=styles.get('percentage'),
+        snap_element=global_snap_to,
+        snap_mode=SnapType.DOWN,
+        margin=next_row_margin,
+    )
+
+    report_chart = WorksheetChart(
+        snap_element=report_table,
+        snap_mode=SnapType.DOWN,
+        initial_rows=15,
+        table_name=re.sub(r'\W', '_', table_name.lower()),
+        columns=chart_columns,
+        categories_name=table_name,
+        page_layout=layout,
+    )
+
+    return report_table, report_chart
+
+
 def init_2_table_row_with_chart(
     styles,
     layout,

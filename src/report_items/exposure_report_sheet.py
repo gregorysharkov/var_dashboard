@@ -2,7 +2,8 @@ from typing import Dict, List
 
 import excel_utils as eu
 import src.report_items.report_group_operations as rgo
-from src.report_items.format_dashboard_worksheet import format_dashboard_worksheet
+from src.report_items.format_dashboard_worksheet import \
+    format_dashboard_worksheet
 from src.report_items.insert_header import insert_header
 from src.report_items.set_up_workbook import set_up_workbook
 
@@ -67,6 +68,6 @@ def generate_exp_report_sheet(writer, data: List[Dict]) -> None:
         eu.insert_table(worksheet, table)
 
     for report_chart in report_charts:
-        eu.insert_stacked_columns_chart(writer, worksheet, report_chart)
+        eu.insert_columns_chart(writer, worksheet, report_chart)
 
     format_dashboard_worksheet(worksheet, layout)
