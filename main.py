@@ -18,7 +18,8 @@ from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.options_stress_sheet import generate_options_stress_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
-from src.report_items.positions_summary_sheet import generate_positions_summary_sheet
+from src.report_items.positions_summary_sheet import \
+    generate_positions_summary_sheet
 from src.report_items.var_report_sheet import generate_var_report_sheet
 
 logging.basicConfig(level=logging.INFO)
@@ -483,21 +484,21 @@ if __name__ == "__main__":
     #         stress_test_price_vol_exposure_results_df,
     #     ]
     # )
-    drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
-                    'Dollar Vega 1%', 'Dollar Theta 1D']
+    # drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
+    #                 'Dollar Vega 1%', 'Dollar Theta 1D']
 
-    column_names = [
-        'Shares/Contracts', 'Exposure', 'Beta', 'Correl', 'Volatility', 'MarketValue',
-        '.01 Shock USD', '.01 Shock', '.1 Shock USD', '.1 Shock'
-    ]
-    position_data = position_breakdown\
-        .drop(drop_columns, axis=1)\
-        .set_index('Position')
-    position_data.columns = column_names
+    # column_names = [
+    #     'Shares/Contracts', 'Exposure', 'Beta', 'Correl', 'Volatility', 'MarketValue',
+    #     '.01 Shock USD', '.01 Shock', '.1 Shock USD', '.1 Shock'
+    # ]
+    # position_data = position_breakdown\
+    #     .drop(drop_columns, axis=1)\
+    #     .set_index('Position')
+    # position_data.columns = column_names
 
     generate_positions_summary_sheet(
         writer,
-        position_data,  # type: ignore
+        position_summary,  # type: ignore
     )
     # # Excel equivalents ["PositionsBreakdown"]; ["PositionsSummary"];
     # position_breakdown.to_excel(

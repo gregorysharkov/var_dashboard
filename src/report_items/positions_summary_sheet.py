@@ -21,6 +21,8 @@ def generate_positions_summary_sheet(writer, data: pd.DataFrame) -> None:
     styles, worksheet = set_up_workbook(writer, sheet_name=SHEET_NAME)
     insert_header(worksheet, styles, layout)
 
+    print(data.columns)
+    print(data.head())
     raw_formats = [None, 'integer', 'percentage'] + \
         ['float']*2 + ['percentage', 'currency'] + ['currency', 'percentage']*2
     formats = [styles.get(fmt) for fmt in raw_formats]
