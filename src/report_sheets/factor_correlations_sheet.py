@@ -1,10 +1,9 @@
 import pandas as pd
 
-import excel_utils as eu
-from src.report_elements import ReportTable
-from src.report_items.format_dashboard_worksheet import \
-    format_dashboard_worksheet
-from src.report_items.set_up_workbook import set_up_workbook
+import src.excel_utils.excel_utils as eu
+from src.excel_utils.set_up_workbook import set_up_workbook
+from src.report_items.report_elements import ReportTable
+from src.report_sheets.format_dashboard_worksheet import format_dashboard_worksheet
 
 from .layouts import CorrelationDashboardLayout
 

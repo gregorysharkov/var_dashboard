@@ -1,4 +1,4 @@
-from src.report_items.styles_init import set_styles
+from src.styles.styles_init import set_styles
 
 
 def set_up_workbook(workbook, sheet_name: str):

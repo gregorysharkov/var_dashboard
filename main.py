@@ -11,21 +11,21 @@ import Exposures
 import Factors
 import pnl_stats
 import VaR
-from src.report_items.dashboard_sheet import generate_dashboard_sheet
-from src.report_items.exposure_report_sheet import generate_exp_report_sheet
-from src.report_items.factor_correlations_sheet import (
-    generate_factor_correlations_sheet,
-)
-from src.report_items.factor_exposures import generate_factor_exposures_sheet
-from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
-from src.report_items.options_stress_sheet import generate_options_stress_sheet
-from src.report_items.pnldata_sheet import generate_pnldata_sheet
-from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
-from src.report_items.positions_breakdown_sheet import (
-    generate_positions_breakdown_sheet,
-)
-from src.report_items.positions_summary_sheet import generate_positions_summary_sheet
-from src.report_items.var_report_sheet import generate_var_report_sheet
+from src.report_sheets.dashboard_sheet import generate_dashboard_sheet
+from src.report_sheets.exposure_report_sheet import generate_exp_report_sheet
+from src.report_sheets.factor_correlations_sheet import \
+    generate_factor_correlations_sheet
+from src.report_sheets.factor_exposures import generate_factor_exposures_sheet
+from src.report_sheets.factor_heatmap import generate_factor_heatmap_sheet
+from src.report_sheets.options_stress_sheet import \
+    generate_options_stress_sheet
+from src.report_sheets.pnldata_sheet import generate_pnldata_sheet
+from src.report_sheets.pnlreport_sheet import generate_pnlreport_sheet
+from src.report_sheets.positions_breakdown_sheet import \
+    generate_positions_breakdown_sheet
+from src.report_sheets.positions_summary_sheet import \
+    generate_positions_summary_sheet
+from src.report_sheets.var_report_sheet import generate_var_report_sheet
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)

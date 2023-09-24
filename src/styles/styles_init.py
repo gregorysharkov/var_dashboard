@@ -2,8 +2,8 @@
 
 from typing import Any, Dict
 
-from ..styles import header_styles as hs
-from ..styles import table_styles as ts
+from . import header_styles as hs
+from . import table_styles as ts
 
 
 def set_styles(workbook) -> Dict[str, Any]:

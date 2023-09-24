@@ -6,7 +6,7 @@ from typing import Callable, List, Tuple
 import pandas as pd
 from xlsxwriter import worksheet
 
-from src.report_elements import ReportTable, WorksheetChart
+from src.report_items.report_elements import ReportTable, WorksheetChart
 
 
 def insert_text(worksheet, table, text) -> None:
