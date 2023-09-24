@@ -1,7 +1,4 @@
-# from itertools import grouper
-from typing import Any, Dict, List
-
-import pandas as pd
+from typing import Dict
 
 import excel_utils as eu
 import src.report_items.report_group_operations as rgo

@@ -12,6 +12,7 @@ import Factors
 import pnl_stats
 import VaR
 from src.report_items.dashboard_sheet import generate_dashboard_sheet
+from src.report_items.exposure_report_sheet import generate_exp_report_sheet
 from src.report_items.factor_exposures import generate_factor_exposures_sheet
 from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
@@ -426,82 +427,32 @@ if __name__ == "__main__":
         }
     )
 
-    # # Excel equivalent ["ExpReport"]
-    # strat_exposure_df.to_excel(
-    #     writer, sheet_name="ExpReport", startcol=1, startrow=4)
-    # sector_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=1,
-    #     startrow=4 + len(strat_exposure_df) + 21,
-    # )
-    # industry_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=1,
-    #     startrow=4 + len(strat_exposure_df) +
-    #     len(sector_exposure_df) + (2 * 21),
-    # )
-    # country_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=1,
-    #     startrow=4
-    #     + len(strat_exposure_df)
-    #     + len(sector_exposure_df)
-    #     + len(industry_exposure_df)
-    #     + (3 * 21),
-    # )
-    # mktcap_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=1,
-    #     startrow=4
-    #     + len(strat_exposure_df)
-    #     + len(sector_exposure_df)
-    #     + len(industry_exposure_df)
-    #     + len(country_exposure_df)
-    #     + (4 * 21),
-    # )
-    # strat_beta_adj_exposure_df.to_excel(
-    #     writer, sheet_name="ExpReport", startcol=7, startrow=4
-    # )
-    # sector_beta_adj_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=7,
-    #     startrow=4 + len(strat_beta_adj_exposure_df) + 21,
-    # )
-    # industry_beta_adj_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=7,
-    #     startrow=4
-    #     + len(strat_beta_adj_exposure_df)
-    #     + len(sector_beta_adj_exposure_df)
-    #     + (2 * 21),
-    # )
-    # country_beta_adj_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=7,
-    #     startrow=4
-    #     + len(strat_beta_adj_exposure_df)
-    #     + len(sector_beta_adj_exposure_df)
-    #     + len(industry_beta_adj_exposure_df)
-    #     + (3 * 21),
-    # )
-    # mktcap_beta_adj_exposure_df.to_excel(
-    #     writer,
-    #     sheet_name="ExpReport",
-    #     startcol=7,
-    #     startrow=4
-    #     + len(strat_beta_adj_exposure_df)
-    #     + len(sector_beta_adj_exposure_df)
-    #     + len(industry_beta_adj_exposure_df)
-    #     + len(country_beta_adj_exposure_df)
-    #     + (4 * 21),
-    # )
+    generate_exp_report_sheet(
+        writer,
+        data=[
+            {
+                'Strategy exposure': strat_exposure_df,
+                'Strategy Beta Exposure': strat_beta_adj_exposure_df,
+            },
+            {
+                'Sector Exposure': sector_exposure_df.set_index('Sector Exposure'),
+                'Sector Beta Exposure': sector_beta_adj_exposure_df,
+            },
+            {
+                'Industry Exposure': industry_exposure_df,
+                'Industry Beta Exposure': industry_beta_adj_exposure_df,
+            },
+            {
+                'Country Exposure': country_exposure_df,
+                'Country Beta Exposure': country_beta_adj_exposure_df,
+            },
+            {
+                'Market Cap Exposure': mktcap_exposure_df,
+                'Market Cap Beta Exposure': mktcap_beta_adj_exposure_df,
+            },
+        ]
+    )
+
     # # Excel equivalent ["VaRReport; "Strat VaR", "Sector VaR", "Industry VaR",
     # # "Country VaR", "Market Cap VaR" tbls]
     # # Position the dataframes in the worksheet.

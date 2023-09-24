@@ -80,3 +80,10 @@ class WideDashboardLayout(DashboardLayout):
     CATEGORY_COLUMNS = ['B', 'F', 'J', 'N']
     MIDDLE_COLUMNS = ['E', 'I', 'M']
     NUMERIC_COLUMNS = ['C', 'D', 'G', 'H', 'K', 'L', 'O', 'P']
+
+
+class ExposureDashboardLayout(DashboardLayout):
+    SIDE_COLUMNS = ['A', 'M', ]
+    CATEGORY_COLUMNS = ['B', 'H', ]
+    MIDDLE_COLUMNS = ['G', ]
+    NUMERIC_COLUMNS = ['C', 'D', 'E', 'F', 'I', 'J', 'K', 'L', ]
