@@ -113,3 +113,10 @@ class PositionsBreakdownDashboardLayout(DashboardLayout):
         'D', 'E', 'F', 'G', 'H', 'I',
         'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
     ]
+
+
+class CorrelationDashboardLayout(DashboardLayout):
+    SIDE_COLUMNS = []
+    CATEGORY_COLUMNS = ['A', ]
+    MIDDLE_COLUMNS = []
+    NUMERIC_COLUMNS = []

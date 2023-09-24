@@ -13,15 +13,18 @@ import pnl_stats
 import VaR
 from src.report_items.dashboard_sheet import generate_dashboard_sheet
 from src.report_items.exposure_report_sheet import generate_exp_report_sheet
+from src.report_items.factor_correlations_sheet import (
+    generate_factor_correlations_sheet,
+)
 from src.report_items.factor_exposures import generate_factor_exposures_sheet
 from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.options_stress_sheet import generate_options_stress_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
-from src.report_items.positions_breakdown_sheet import \
-    generate_positions_breakdown_sheet
-from src.report_items.positions_summary_sheet import \
-    generate_positions_summary_sheet
+from src.report_items.positions_breakdown_sheet import (
+    generate_positions_breakdown_sheet,
+)
+from src.report_items.positions_summary_sheet import generate_positions_summary_sheet
 from src.report_items.var_report_sheet import generate_var_report_sheet
 
 logging.basicConfig(level=logging.INFO)
@@ -140,6 +143,7 @@ if __name__ == "__main__":
     # pd.ExcelWriter
     writer = xlsxwriter.Workbook(
         f"output/risk_report_{now}.xlsx", {'constant_memory': False, 'nan_inf_to_errors': True})
+    writer.set_tab_ratio(75)
     # Excel equivalent ["FactorCorrels"]
     matrix_correlation = VaR.matrix_correlation(factor_prices, factor)
     matrix_cov = VaR.matrix_cov(factor_prices)
@@ -489,15 +493,6 @@ if __name__ == "__main__":
     # drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
     #                 'Dollar Vega 1%', 'Dollar Theta 1D']
 
-    # column_names = [
-    #     'Shares/Contracts', 'Exposure', 'Beta', 'Correl', 'Volatility', 'MarketValue',
-    #     '.01 Shock USD', '.01 Shock', '.1 Shock USD', '.1 Shock'
-    # ]
-    # position_data = position_breakdown\
-    #     .drop(drop_columns, axis=1)\
-    #     .set_index('Position')
-    # position_data.columns = column_names
-
     generate_positions_summary_sheet(
         writer,
         position_summary,  # type: ignore
@@ -506,6 +501,11 @@ if __name__ == "__main__":
     generate_positions_breakdown_sheet(
         writer,
         position_breakdown.fillna(0),  # type: ignore
+    )
+
+    generate_factor_correlations_sheet(
+        writer,
+        matrix_correlation,
     )
     # # Excel equivalents ["PositionsBreakdown"]; ["PositionsSummary"];
     # position_breakdown.to_excel(

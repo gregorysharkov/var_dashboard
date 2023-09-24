@@ -18,6 +18,7 @@ def set_styles(workbook) -> Dict[str, Any]:
         'integer': ts.add_integer_format(workbook),
         'percentage': ts.add_percentage_format(workbook),
         'black_percentage': ts.add_black_font_percentage_format(workbook),
+        'black_float': ts.add_black_float_format(workbook),
         'date': ts.add_date_format(workbook),
         'report_header_title': hs.add_header_title(workbook),
         'report_header_sub_title': hs.add_header_sub_title(workbook),

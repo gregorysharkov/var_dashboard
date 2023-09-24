@@ -13,6 +13,7 @@ DASHED_BORDER_INDEX = 4
 CURRENCY_FORMAT = '"$"# ##0_);[Red]("$"# ##0)'
 PERCENTAGE_FORMAT = '# ##0.00%_);[Red](# ##0.00%)'
 PERCENTAGE_NO_COLOR_FORMAT = '0.00%'
+FLOAT_NO_COLOR_FORMAT = '0.00'
 FLOAT_FORMAT = '0.00;[Red]-0.00'
 INTEGER_FORMAT = '# ##0'
 DATE_FORMAT = 'mm/dd/yy'
@@ -114,6 +115,12 @@ def add_black_font_percentage_format(workbook):
     '''percentage format for conditional formatting'''
 
     return _add_num_format(workbook, PERCENTAGE_NO_COLOR_FORMAT)
+
+
+def add_black_float_format(workbook):
+    '''add black floats for conditional formatting'''
+
+    return _add_num_format(workbook, FLOAT_NO_COLOR_FORMAT)
 
 
 def add_date_format(workbook) -> Any:
