@@ -103,3 +103,13 @@ class PositionsDashboardLayout(DashboardLayout):
     MIDDLE_COLUMNS = []
     NUMERIC_COLUMNS = ['C', 'D', 'E', 'F',
                        'G', 'H', 'I', 'J', 'K', 'L',]
+
+
+class PositionsBreakdownDashboardLayout(DashboardLayout):
+    SIDE_COLUMNS = ['A', ]
+    CATEGORY_COLUMNS = ['B', 'C', ]
+    MIDDLE_COLUMNS = []
+    NUMERIC_COLUMNS = [
+        'D', 'E', 'F', 'G', 'H', 'I',
+        'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+    ]

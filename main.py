@@ -18,6 +18,8 @@ from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.options_stress_sheet import generate_options_stress_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
+from src.report_items.positions_breakdown_sheet import \
+    generate_positions_breakdown_sheet
 from src.report_items.positions_summary_sheet import \
     generate_positions_summary_sheet
 from src.report_items.var_report_sheet import generate_var_report_sheet
@@ -499,6 +501,11 @@ if __name__ == "__main__":
     generate_positions_summary_sheet(
         writer,
         position_summary,  # type: ignore
+    )
+
+    generate_positions_breakdown_sheet(
+        writer,
+        position_breakdown.fillna(0),  # type: ignore
     )
     # # Excel equivalents ["PositionsBreakdown"]; ["PositionsSummary"];
     # position_breakdown.to_excel(
