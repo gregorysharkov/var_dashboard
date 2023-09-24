@@ -10,22 +10,8 @@ import xlsxwriter
 import Exposures
 import Factors
 import pnl_stats
+import src.report_sheets as rsh
 import VaR
-from src.report_sheets.dashboard_sheet import generate_dashboard_sheet
-from src.report_sheets.exposure_report_sheet import generate_exp_report_sheet
-from src.report_sheets.factor_correlations_sheet import \
-    generate_factor_correlations_sheet
-from src.report_sheets.factor_exposures import generate_factor_exposures_sheet
-from src.report_sheets.factor_heatmap import generate_factor_heatmap_sheet
-from src.report_sheets.options_stress_sheet import \
-    generate_options_stress_sheet
-from src.report_sheets.pnldata_sheet import generate_pnldata_sheet
-from src.report_sheets.pnlreport_sheet import generate_pnlreport_sheet
-from src.report_sheets.positions_breakdown_sheet import \
-    generate_positions_breakdown_sheet
-from src.report_sheets.positions_summary_sheet import \
-    generate_positions_summary_sheet
-from src.report_sheets.var_report_sheet import generate_var_report_sheet
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -33,7 +19,8 @@ LOGGER = logging.getLogger(__name__)
 now = datetime.utcnow().strftime("%Y%m%d")
 
 
-def get_market_trading_days(start_date: str, end_date: str) -> pd.DatetimeIndex:
+def get_market_trading_days(start_date: str, end_date: str) -> pd.DataFrame:
+    '''generate market calendar for NYSE'''
     nyse = mcal.get_calendar("NYSE")
     market_trading_days_range = nyse.schedule(
         start_date=start_date, end_date=end_date)
@@ -105,7 +92,8 @@ if __name__ == "__main__":
     # structure positions, factor, price data for subsequent estimation of Factor
     # betas, VaRs, Exposures, and Stress Tests
     price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
-    position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 10)]
+    # TODO: MAKE IT PARAMETRISABLE
+    position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
     factor_names = list(factor["Factor Names"])
     factor_names = [name for name in factor_names if str(name) != "nan"]
     factor_ids_full = list(factor["FactorID"])
@@ -199,26 +187,26 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    # stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
-    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    # )
-    # stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
-    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    # )
-    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    # (
-    #     stress_test_price_vol_calc,
-    #     stress_test_price_vol_exposure_calc,
-    # ) = VaR.filter_stress_test_price_vol(
-    #     filters_dict, factor_prices, position, price_vol_shock_range
-    # )
-    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    # stress_test_price_vol_results_df = VaR.stress_test_structuring(
-    #     stress_test_price_vol_calc, position, price_vol_shock_range
-    # )
-    # stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
-    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    # )
+    stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
+        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    )
+    stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
+        stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    )
+    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    (
+        stress_test_price_vol_calc,
+        stress_test_price_vol_exposure_calc,
+    ) = VaR.filter_stress_test_price_vol(
+        filters_dict, factor_prices, position, price_vol_shock_range
+    )
+    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    stress_test_price_vol_results_df = VaR.stress_test_structuring(
+        stress_test_price_vol_calc, position, price_vol_shock_range
+    )
+    stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
+        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -384,7 +372,7 @@ if __name__ == "__main__":
         }
     )
 
-    generate_dashboard_sheet(
+    rsh.generate_dashboard_sheet(
         writer,
         data={
             'var_structured_position_top10': VaR_structured_position_top10,
@@ -400,27 +388,27 @@ if __name__ == "__main__":
     )
 
     # 1.g., build rest of workbook beyond dashboard
-    generate_pnldata_sheet(
+    rsh.generate_pnldata_sheet(
         writer,
         data_dict={
             'aum_clean': AUM_clean,
         }
     )
 
-    generate_pnlreport_sheet(
+    rsh.generate_pnlreport_sheet(
         writer,
         data_dict={
             'comparative_analysis_stats': comparative_analysis_stats,
             'return_analysis_stats': return_analysis_stats,
         }
     )
-    generate_factor_heatmap_sheet(
+    rsh.generate_factor_heatmap_sheet(
         writer,
         data_dict={
             'factor_heatmap': factor_heat_map,
         }
     )
-    generate_factor_exposures_sheet(
+    rsh.generate_factor_exposures_sheet(
         writer,
         data={
             'macro_factor_decomp_df': macro_factor_decomp_df,
@@ -430,7 +418,7 @@ if __name__ == "__main__":
         }
     )
 
-    generate_exp_report_sheet(
+    rsh.generate_exp_report_sheet(
         writer,
         data=[
             {
@@ -456,7 +444,7 @@ if __name__ == "__main__":
         ]
     )
 
-    generate_var_report_sheet(
+    rsh.generate_var_report_sheet(
         writer,
         data=[
             {
@@ -473,51 +461,40 @@ if __name__ == "__main__":
         ]
     )
 
-    # generate_options_stress_sheet(
-    #     writer,
-    #     data=[
-    #         {
-    #             'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-    #             'options_delta1_exposure_calc': options_delta1_exposure_calc,
-    #             'greek_sensitivities_calc': greek_sensitivities_calc.set_index('Greek Sensitivity'),
-    #             'options_premium_calc': options_premium_calc.set_index('Premium'),
-    #         },
-    #         {
-    #             'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-    #             'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-    #             'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
-    #         },
-    #         stress_test_price_vol_exposure_results_df,
-    #     ]
-    # )
-    # drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
-    #                 'Dollar Vega 1%', 'Dollar Theta 1D']
+    rsh.generate_options_stress_sheet(
+        writer,
+        data=[
+            {
+                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+                'options_delta1_exposure_calc': options_delta1_exposure_calc,
+                'greek_sensitivities_calc': greek_sensitivities_calc.set_index('Greek Sensitivity'),
+                'options_premium_calc': options_premium_calc.set_index('Premium'),
+            },
+            {
+                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+            },
+            stress_test_price_vol_exposure_results_df,
+        ]
+    )
+    drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
+                    'Dollar Vega 1%', 'Dollar Theta 1D']
 
-    generate_positions_summary_sheet(
+    rsh.generate_positions_summary_sheet(
         writer,
         position_summary,  # type: ignore
     )
 
-    generate_positions_breakdown_sheet(
+    rsh.generate_positions_breakdown_sheet(
         writer,
         position_breakdown.fillna(0),  # type: ignore
     )
 
-    generate_factor_correlations_sheet(
+    rsh.generate_factor_correlations_sheet(
         writer,
         matrix_correlation,
     )
-    # # Excel equivalents ["PositionsBreakdown"]; ["PositionsSummary"];
-    # position_breakdown.to_excel(
-    #     writer, sheet_name="PositionsBreakdown", startcol=1, startrow=4
-    # )
-    # position_summary.to_excel(
-    #     writer, sheet_name="PositionsSummary", startcol=1, startrow=4
-    # )
-    # # Excel equivalent ["FactorCorrels"]
-    # matrix_correlation.to_excel(
-    #     writer, sheet_name="FactorCorrels", startcol=0, startrow=0
-    # )
 
     writer.close()
     LOGGER.info("assess & interpret")

@@ -1,14 +1,13 @@
 from typing import Dict, List
 
 import src.excel_utils.excel_utils as eu
-import src.report_sheets.report_group_operations as rgo
+import src.excel_utils.report_group_operations as rgo
+from src.excel_utils.header import insert_header
 from src.excel_utils.set_up_workbook import set_up_workbook
-from src.report_sheets.format_dashboard_worksheet import \
-    format_dashboard_worksheet
-from src.report_sheets.insert_header import insert_header
+from src.excel_utils.sheet_format import format_dashboard_worksheet
+from src.layouts.layouts import NarrowDashboardLayout
 
 from ..report_items.snap_operations import SnapType
-from .layouts import NarrowDashboardLayout
 
 SHEET_NAME = 'VaRReport'
 

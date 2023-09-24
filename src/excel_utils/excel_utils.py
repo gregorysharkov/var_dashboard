@@ -193,6 +193,8 @@ def insert_dual_axis_chart(
     series_chart, _ = _set_series_line_chart(
         workbook, worksheet_chart_line)
     bar_chart.combine(series_chart)
+    # bar_chart.set_y2_axis({'name': 'Cumulative Return'})
+
     worksheet.insert_chart(
         row=bar_chart_position[1], col=bar_chart_position[0], chart=bar_chart)
 
@@ -298,5 +300,6 @@ def _add_time_series(
         'categories': f'={table_name}[{categories}]',
         'name': column_name,
         'fill': {'color':  color},
+        # 'y2_axis': True,
     })
     chart.set_x_axis({'date_axis': True})

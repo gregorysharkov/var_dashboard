@@ -2,10 +2,9 @@ import pandas as pd
 
 import src.excel_utils.excel_utils as eu
 from src.excel_utils.set_up_workbook import set_up_workbook
+from src.excel_utils.sheet_format import format_dashboard_worksheet
+from src.layouts.layouts import CorrelationDashboardLayout
 from src.report_items.report_table import ReportTable
-from src.report_sheets.format_dashboard_worksheet import format_dashboard_worksheet
-
-from .layouts import CorrelationDashboardLayout
 
 SHEET_NAME = 'FactorCorrels'
 
