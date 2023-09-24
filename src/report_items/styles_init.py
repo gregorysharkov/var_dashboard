@@ -14,6 +14,8 @@ def set_styles(workbook) -> Dict[str, Any]:
         'table_body': ts.add_table_body_format(workbook),
         'table_frame': ts.add_body_frame_format(workbook),
         'currency': ts.add_currency_format(workbook),
+        'float': ts.add_float_format(workbook),
+        'integer': ts.add_integer_format(workbook),
         'percentage': ts.add_percentage_format(workbook),
         'black_percentage': ts.add_black_font_percentage_format(workbook),
         'date': ts.add_date_format(workbook),

@@ -109,14 +109,37 @@ def apply_conditional_formatting(
 
 
 def _set_column_types(report_table):
+    '''wrapper for calling the proper collumn type setter'''
+
+    if isinstance(report_table.values_format, list):
+        return _set_manual_column_types(report_table)
+
+    return _set_static_column_types(report_table)
+
+
+def _set_static_column_types(report_table):
     '''generates a dictionary of formats'''
     return_list = []
+
     data = report_table.data
     for column, column_type in zip(data.columns, [str(x) for x in list(data.dtypes)]):
         column_format = report_table.date_format if 'date' in column_type else report_table.values_format
         return_list.append({
             'header': column,
             'format': column_format,
+        })
+
+    return return_list
+
+
+def _set_manual_column_types(report_table):
+    '''sets each column a type specified in a list of values format'''
+
+    return_list = []
+    for column, value_format in zip(report_table.data.columns, report_table.values_format):
+        return_list.append({
+            'header': column,
+            'format': value_format,
         })
 
     return return_list

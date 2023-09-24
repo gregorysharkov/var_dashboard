@@ -18,6 +18,7 @@ from src.report_items.factor_heatmap import generate_factor_heatmap_sheet
 from src.report_items.options_stress_sheet import generate_options_stress_sheet
 from src.report_items.pnldata_sheet import generate_pnldata_sheet
 from src.report_items.pnlreport_sheet import generate_pnlreport_sheet
+from src.report_items.positions_summary_sheet import generate_positions_summary_sheet
 from src.report_items.var_report_sheet import generate_var_report_sheet
 
 logging.basicConfig(level=logging.INFO)
@@ -191,26 +192,26 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
-        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    )
-    stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    (
-        stress_test_price_vol_calc,
-        stress_test_price_vol_exposure_calc,
-    ) = VaR.filter_stress_test_price_vol(
-        filters_dict, factor_prices, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    stress_test_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_calc, position, price_vol_shock_range
-    )
-    stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    )
+    # stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
+    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    # )
+    # stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    # (
+    #     stress_test_price_vol_calc,
+    #     stress_test_price_vol_exposure_calc,
+    # ) = VaR.filter_stress_test_price_vol(
+    #     filters_dict, factor_prices, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    # stress_test_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_calc, position, price_vol_shock_range
+    # )
+    # stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    # )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -465,37 +466,39 @@ if __name__ == "__main__":
         ]
     )
 
-    generate_options_stress_sheet(
-        writer,
-        data=[
-            {
-                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-                'options_delta1_exposure_calc': options_delta1_exposure_calc,
-                'greek_sensitivities_calc': greek_sensitivities_calc.set_index('Greek Sensitivity'),
-                'options_premium_calc': options_premium_calc.set_index('Premium'),
-            },
-            {
-                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
-            },
-            stress_test_price_vol_exposure_results_df,
-        ]
-    )
+    # generate_options_stress_sheet(
+    #     writer,
+    #     data=[
+    #         {
+    #             'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+    #             'options_delta1_exposure_calc': options_delta1_exposure_calc,
+    #             'greek_sensitivities_calc': greek_sensitivities_calc.set_index('Greek Sensitivity'),
+    #             'options_premium_calc': options_premium_calc.set_index('Premium'),
+    #         },
+    #         {
+    #             'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+    #             'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+    #             'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+    #         },
+    #         stress_test_price_vol_exposure_results_df,
+    #     ]
+    # )
+    drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
+                    'Dollar Vega 1%', 'Dollar Theta 1D']
 
-    # # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    # stress_test_beta_price_vol_results_df.to_excel(
-    #     writer, sheet_name="Options&Stress", startcol=2, startrow=39
-    # )
-    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    # stress_test_price_vol_results_df.to_excel(
-    #     writer, sheet_name="Options&Stress", startcol=2, startrow=54
-    # )
-    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure
-    # # tbl"]
-    # stress_test_price_vol_exposure_results_df.to_excel(
-    #     writer, sheet_name="Options&Stress", startcol=2, startrow=70
-    # )
+    column_names = [
+        'Shares/Contracts', 'Exposure', 'Beta', 'Correl', 'Volatility', 'MarketValue',
+        '.01 Shock USD', '.01 Shock', '.1 Shock USD', '.1 Shock'
+    ]
+    position_data = position_breakdown\
+        .drop(drop_columns, axis=1)\
+        .set_index('Position')
+    position_data.columns = column_names
+
+    generate_positions_summary_sheet(
+        writer,
+        position_data,  # type: ignore
+    )
     # # Excel equivalents ["PositionsBreakdown"]; ["PositionsSummary"];
     # position_breakdown.to_excel(
     #     writer, sheet_name="PositionsBreakdown", startcol=1, startrow=4
