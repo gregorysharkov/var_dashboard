@@ -5,7 +5,7 @@ import pandas as pd
 import src.excel_utils.excel_utils as eu
 from src.excel_utils.set_up_workbook import set_up_workbook
 
-from ..report_items.report_elements import ReportTable
+from ..report_items.report_table import ReportTable
 
 PNLDATA_SHEET_NAME = 'FactorHeatMap'
 

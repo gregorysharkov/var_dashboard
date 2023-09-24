@@ -3,8 +3,9 @@ from typing import Any, List, Optional, Tuple
 
 import pandas as pd
 
-from src.report_items.report_elements import ReportTable, WorksheetChart
+from src.report_items.report_table import ReportTable
 from src.report_items.snap_operations import SnapType
+from src.report_items.worksheet_chart import WorksheetChart
 
 
 def init_report_group(

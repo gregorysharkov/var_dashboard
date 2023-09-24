@@ -1,12 +1,14 @@
 '''Module for formatting tables in Excel'''
+# pylint: disable=W0621
 
 from itertools import cycle
-from typing import Callable, List, Tuple
+from typing import Callable
 
 import pandas as pd
 from xlsxwriter import worksheet
 
-from src.report_items.report_elements import ReportTable, WorksheetChart
+from src.report_items.report_table import ReportTable
+from src.report_items.worksheet_chart import WorksheetChart
 
 
 def insert_text(worksheet, table, text) -> None:
@@ -20,7 +22,7 @@ def insert_text(worksheet, table, text) -> None:
 def merge_above(worksheet, table: ReportTable, style, text) -> None:
     '''inserts a text above the given element'''
 
-    (start_col, start_row), (end_col, end_row) = table.range
+    (start_col, start_row), (end_col, end_row) = table.range  # type: ignore
 
     start_row -= 1
 
@@ -30,7 +32,7 @@ def merge_above(worksheet, table: ReportTable, style, text) -> None:
 
 def merge_to_left(worksheet, table: ReportTable, style, text) -> None:
     '''inserts merged range to the left'''
-
+    # pylint: disable=W0621
     (start_col, start_row), (end_col, end_row) = table.range
 
     worksheet.merge_range(start_row, start_col-1,
@@ -122,8 +124,10 @@ def _set_static_column_types(report_table):
     return_list = []
 
     data = report_table.data
-    for column, column_type in zip(data.columns, [str(x) for x in list(data.dtypes)]):
-        column_format = report_table.date_format if 'date' in column_type else report_table.values_format
+    data_types = [str(x) for x in list(data.dtypes)]
+    for column, column_type in zip(data.columns, data_types):
+        column_format = report_table.date_format \
+            if 'date' in column_type else report_table.values_format
         return_list.append({
             'header': column,
             'format': column_format,
@@ -136,7 +140,10 @@ def _set_manual_column_types(report_table):
     '''sets each column a type specified in a list of values format'''
 
     return_list = []
-    for column, value_format in zip(report_table.data.columns, report_table.values_format):
+    for column, value_format in zip(
+        report_table.data.columns,
+        report_table.values_format
+    ):
         return_list.append({
             'header': column,
             'format': value_format,
@@ -173,7 +180,12 @@ def insert_series_bar_chart(
     worksheet.insert_chart(row=position[1], col=position[0], chart=chart)
 
 
-def insert_dual_axis_chart(workbook, worksheet, worksheet_chart_bars, worksheet_chart_line):
+def insert_dual_axis_chart(
+    workbook,
+    worksheet,
+    worksheet_chart_bars,
+    worksheet_chart_line
+) -> None:
     '''adds dual axis chart'''
 
     bar_chart, bar_chart_position = _set_series_bar_chart(
@@ -231,7 +243,8 @@ def _create_stacked_line_chart_type(workbook):
 
 
 def _set_chart_title(worksheet_chart, chart):
-    chart_title = worksheet_chart.title if worksheet_chart.title else worksheet_chart.categories_name  # noqa: E501
+    chart_title = worksheet_chart.title \
+        if worksheet_chart.title else worksheet_chart.categories_name
     chart.set_title({
         'name': chart_title,
         'overlay': True,
@@ -256,7 +269,13 @@ def _format_chart(worksheet_chart, chart):
     return position
 
 
-def _add_series(chart, table_name: str, column_name: str, categories: str, color: str) -> None:
+def _add_series(
+    chart,
+    table_name: str,
+    column_name: str,
+    categories: str,
+    color: str
+) -> None:
     '''adds a series to the given chart'''
     chart.add_series({
         'values': f'={table_name}[{column_name}]',
@@ -266,7 +285,13 @@ def _add_series(chart, table_name: str, column_name: str, categories: str, color
     })
 
 
-def _add_time_series(chart, table_name: str, column_name: str, categories, color: str) -> None:
+def _add_time_series(
+    chart,
+    table_name: str,
+    column_name: str,
+    categories,
+    color: str
+) -> None:
     '''adds time series to the given chart'''
     chart.add_series({
         'values': f'={table_name}[{column_name}]',

@@ -1,3 +1,11 @@
+# pylint: disable=C0115
+'''
+contains all layouts used to generate reports
+In general, each layout defines which columns should:
+* be categorical (wide)
+* numeric (normal)
+* etc...
+'''
 from typing import Dict
 
 FONT_SIZE = 10
@@ -47,7 +55,9 @@ class DashboardLayout:
             col: self.NUMERIC_COLUMNS_WIDTH for col in self.NUMERIC_COLUMNS
         })
 
-        return {key: return_dict.get(key) for key in sorted(return_dict.keys())}
+        return {
+            key: return_dict.get(key) for key in sorted(return_dict.keys())
+        }  # type: ignore
 
     def pixels_to_right_edge(self, start_col: int) -> float:
         '''
@@ -56,7 +66,7 @@ class DashboardLayout:
         '''
         width_in_units = list(self.widths.values())[start_col:-1]
         widths_in_pixels = [
-            UNITS_TO_PIXELS.get(x, self.PIXELS_PER_WIDTH)
+            UNITS_TO_PIXELS.get(x, self.PIXELS_PER_WIDTH)  # type: ignore
             for x in width_in_units
         ]
 
@@ -102,7 +112,7 @@ class PositionsDashboardLayout(DashboardLayout):
     CATEGORY_COLUMNS = ['B', ]
     MIDDLE_COLUMNS = []
     NUMERIC_COLUMNS = ['C', 'D', 'E', 'F',
-                       'G', 'H', 'I', 'J', 'K', 'L',]
+                       'G', 'H', 'I', 'J', 'K', 'L', ]
 
 
 class PositionsBreakdownDashboardLayout(DashboardLayout):
