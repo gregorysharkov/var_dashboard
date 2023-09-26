@@ -57,22 +57,8 @@ def generate_options_stress_sheet(writer, data: List[Dict]) -> None:
         format_name='black_percentage'
     )
 
-    # print(data[2].head())
-    # sector_stress_test_table = ReportTable(
-    #     data=data[2],  # type: ignore
-    #     table_name='sector_stress_test',
-    #     snap_element=formatted_report_tables[-1],
-    #     snap_mode=SnapType.DOWN,
-    #     margin=2,
-    #     values_format='currency'
-    # )
-
-    # report_tables.append(sector_stress_test_table)
-
     for table in report_tables:
         eu.insert_table(worksheet, table)
-
-    # eu.insert_text(worksheet, report_tables[-1], 'Sector Stress Test')
 
     table_labels = [
         'Price & Volatility Stress Test P&L',
@@ -81,7 +67,11 @@ def generate_options_stress_sheet(writer, data: List[Dict]) -> None:
     ]
     top_captions = ['Price Shock', 'Price * Beta Shock', 'Price Shock']
     right_caption = 'Volatility Shock'
-    for formatted_table, caption, label in zip(formatted_report_tables, top_captions, table_labels):
+    for formatted_table, caption, label in zip(
+        formatted_report_tables,
+        top_captions,
+        table_labels,
+    ):
         eu.insert_table(worksheet, formatted_table)
         eu.apply_conditional_formatting(worksheet, formatted_table)
         eu.merge_above(

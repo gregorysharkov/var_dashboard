@@ -6,7 +6,7 @@ import src.excel_utils.excel_utils as eu
 from src.excel_utils.header import insert_header
 from src.excel_utils.set_up_workbook import set_up_workbook
 from src.excel_utils.sheet_format import format_dashboard_worksheet
-from src.layouts.layouts import NarrowDashboardLayout
+from src.layouts.layouts import DashboardLayout
 
 from ..report_items.report_table import ReportTable
 from ..report_items.snap_operations import SnapType
@@ -18,7 +18,7 @@ PNLDATA_SHEET_NAME = 'PNLReport'
 def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None:
     '''generates pnl report sheet'''
 
-    layout = NarrowDashboardLayout()
+    layout = DashboardLayout()
     styles, worksheet = set_up_workbook(writer, sheet_name=PNLDATA_SHEET_NAME)
     insert_header(worksheet, styles, layout)
 
@@ -30,6 +30,7 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
         categories_name='index',
         page_layout=layout,
         title='Daily vs. Cumulative Returns',
+        axis_format='percentage',
     )
 
     cumulative_returns_chart = WorksheetChart(
@@ -57,7 +58,7 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
         table_name='comparative_analysis_stats',
         snap_element=return_analysis_stats,
         snap_mode=SnapType.RIGHT,
-        margin=2
+        margin=5
     )
     eu.insert_table(worksheet, comparative_analysis_stats)
 

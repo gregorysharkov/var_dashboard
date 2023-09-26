@@ -135,6 +135,7 @@ def init_table_with_chart(
         columns=chart_columns,
         categories_name=table_name,
         page_layout=layout,
+        axis_format='percentage',
     )
 
     return report_table, report_chart
@@ -186,6 +187,7 @@ def init_2_table_row_with_chart(
         columns=chart_columns,
         categories_name=left_name,
         page_layout=layout,
+        axis_format='percentage',
     )
     return [left_table_report, right_table_report], chart
 

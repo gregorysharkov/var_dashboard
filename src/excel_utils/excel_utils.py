@@ -205,7 +205,7 @@ def _set_series_line_chart(workbook, worksheet_chart):
     chart = _create_stacked_line_chart_type(workbook)
     _set_chart_title(worksheet_chart, chart)
     _add_bar_series(worksheet_chart, chart, _add_time_series)
-    _set_axis_format(chart, worksheet_chart.axis_format)
+    _set_axis_format(chart, FORMATS.get(f'{worksheet_chart.axis_format}_text'))
     position = _format_chart(worksheet_chart, chart)
     return chart, position
 
@@ -216,6 +216,7 @@ def _set_series_bar_chart(workbook, worksheet_chart):
     chart = _create_bar_chart_type(workbook)
     _set_chart_title(worksheet_chart, chart)
     _add_bar_series(worksheet_chart, chart, _add_time_series)
+    _set_axis_format(chart, FORMATS.get(f'{worksheet_chart.axis_format}_text'))
     position = _format_chart(worksheet_chart, chart)
     return chart, position
 

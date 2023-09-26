@@ -406,7 +406,7 @@ if __name__ == "__main__":
     rsh.generate_factor_heatmap_sheet(
         writer,
         data_dict={
-            'factor_heatmap': factor_heat_map,
+            'factor_heatmap': factor_heat_map.sort_values('Exposure', ascending=False),
         }
     )
     rsh.generate_factor_exposures_sheet(

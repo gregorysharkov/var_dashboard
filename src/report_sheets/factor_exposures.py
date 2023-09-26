@@ -40,6 +40,7 @@ def generate_factor_exposures_sheet(
         snap_mode=SnapType.RIGHT,
         page_layout=layout,
         margin=1,
+        axis_format='percentage',
     )
     eu.insert_series_bar_chart(writer, worksheet, macro_sensitivity_chart)
 
@@ -61,6 +62,7 @@ def generate_factor_exposures_sheet(
         snap_mode=SnapType.RIGHT,
         page_layout=layout,
         margin=1,
+        axis_format='percentage',
     )
     eu.insert_series_bar_chart(writer, worksheet, sector_sensitivity_chart)
 

@@ -44,6 +44,7 @@ def generate_exp_report_sheet(writer, data: List[Dict]) -> None:
         columns=['Long', 'Short'],
         categories_name='Strategy Exposure',
         title='Strategy Exposure',
+        axis_format='percentage',
     )
     report_charts.append(strategy_chart)
 
