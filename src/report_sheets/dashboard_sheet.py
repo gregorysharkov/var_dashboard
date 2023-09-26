@@ -149,6 +149,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         snap_mode=SnapType.RIGHT,
         page_layout=layout,
         margin=1,
+        axis_format='percentage',
     )
     eu.insert_columns_chart(writer, worksheet, sector_exposure_chart)
     charts.update({table_name: sector_exposure_chart})
@@ -162,6 +163,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         snap_mode=SnapType.RIGHT,
         page_layout=layout,
         margin=1,
+        axis_format='percentage',
     )
     eu.insert_columns_chart(
         writer, worksheet, macro_factor_sensitivity_chart)
@@ -176,6 +178,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         snap_mode=SnapType.RIGHT,
         page_layout=layout,
         margin=1,
+        axis_format='percentage',
     )
     eu.insert_columns_chart(
         writer, worksheet, sector_sensitivity_chart)

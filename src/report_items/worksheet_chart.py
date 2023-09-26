@@ -30,6 +30,7 @@ class WorksheetChart(ReportItem):
     initial_rows: int = 15
     title: str = None  # type: ignore
     stacked: bool = True
+    axis_format: str = 'float'
 
     @property
     def size(self) -> Tuple[float, float]:

@@ -129,8 +129,9 @@ if __name__ == "__main__":
     # 1.b. VaR functions
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     # pd.ExcelWriter
-    writer = xlsxwriter.Workbook(
-        f"output/risk_report_{now}.xlsx", {'constant_memory': False, 'nan_inf_to_errors': True})
+    writer_options = {'constant_memory': False, 'nan_inf_to_errors': True}
+    file_name = f"output/risk_report_{now}.xlsx"
+    writer = xlsxwriter.Workbook(file_name, writer_options)
     writer.set_tab_ratio(75)
     # Excel equivalent ["FactorCorrels"]
     matrix_correlation = VaR.matrix_correlation(factor_prices, factor)
@@ -187,26 +188,26 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
-        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    )
-    stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    (
-        stress_test_price_vol_calc,
-        stress_test_price_vol_exposure_calc,
-    ) = VaR.filter_stress_test_price_vol(
-        filters_dict, factor_prices, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    stress_test_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_calc, position, price_vol_shock_range
-    )
-    stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    )
+    # stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
+    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    # )
+    # stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    # (
+    #     stress_test_price_vol_calc,
+    #     stress_test_price_vol_exposure_calc,
+    # ) = VaR.filter_stress_test_price_vol(
+    #     filters_dict, factor_prices, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    # stress_test_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_calc, position, price_vol_shock_range
+    # )
+    # stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    # )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -461,23 +462,23 @@ if __name__ == "__main__":
         ]
     )
 
-    rsh.generate_options_stress_sheet(
-        writer,
-        data=[
-            {
-                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-                'options_delta1_exposure_calc': options_delta1_exposure_calc,
-                'greek_sensitivities_calc': greek_sensitivities_calc.set_index('Greek Sensitivity'),
-                'options_premium_calc': options_premium_calc.set_index('Premium'),
-            },
-            {
-                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
-            },
-            stress_test_price_vol_exposure_results_df,
-        ]
-    )
+    # rsh.generate_options_stress_sheet(
+    #     writer,
+    #     data=[
+    #         {
+    #             'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+    #             'options_delta1_exposure_calc': options_delta1_exposure_calc,
+    #             'greek_sensitivities_calc': greek_sensitivities_calc.set_index('Greek Sensitivity'),
+    #             'options_premium_calc': options_premium_calc.set_index('Premium'),
+    #         },
+    #         {
+    #             'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+    #             'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+    #             'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+    #         },
+    #         stress_test_price_vol_exposure_results_df,
+    #     ]
+    # )
     drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
                     'Dollar Vega 1%', 'Dollar Theta 1D']
 

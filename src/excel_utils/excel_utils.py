@@ -9,6 +9,7 @@ from xlsxwriter import worksheet
 
 from src.report_items.report_table import ReportTable
 from src.report_items.worksheet_chart import WorksheetChart
+from src.styles.styles_init import FORMATS
 
 
 def insert_text(worksheet, table, text) -> None:
@@ -193,7 +194,6 @@ def insert_dual_axis_chart(
     series_chart, _ = _set_series_line_chart(
         workbook, worksheet_chart_line)
     bar_chart.combine(series_chart)
-    # bar_chart.set_y2_axis({'name': 'Cumulative Return'})
 
     worksheet.insert_chart(
         row=bar_chart_position[1], col=bar_chart_position[0], chart=bar_chart)
@@ -205,6 +205,7 @@ def _set_series_line_chart(workbook, worksheet_chart):
     chart = _create_stacked_line_chart_type(workbook)
     _set_chart_title(worksheet_chart, chart)
     _add_bar_series(worksheet_chart, chart, _add_time_series)
+    _set_axis_format(chart, worksheet_chart.axis_format)
     position = _format_chart(worksheet_chart, chart)
     return chart, position
 
@@ -222,6 +223,7 @@ def _set_series_bar_chart(workbook, worksheet_chart):
 def _create_column_chart(workbook, worksheet_chart, stacked=True):
     chart = _create_bar_chart_type(workbook, stacked)
     _set_chart_title(worksheet_chart, chart)
+    _set_axis_format(chart, FORMATS.get(f'{worksheet_chart.axis_format}_text'))
     position = _format_chart(worksheet_chart, chart)
     _add_bar_series(worksheet_chart, chart, _add_series)
     return chart, position
@@ -242,6 +244,10 @@ def _create_stacked_line_chart_type(workbook):
         'subtype': 'stacked',
     })
     return chart
+
+
+def _set_axis_format(chart, axis_format: str):
+    chart.set_y_axis({'num_format': axis_format})
 
 
 def _set_chart_title(worksheet_chart, chart):

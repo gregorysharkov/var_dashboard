@@ -4,6 +4,18 @@ from typing import Any, Dict
 
 from . import header_styles as hs
 from . import table_styles as ts
+from .table_styles import (CURRENCY_FORMAT, FLOAT_FORMAT,
+                           FLOAT_NO_COLOR_FORMAT, INTEGER_FORMAT,
+                           PERCENTAGE_FORMAT, PERCENTAGE_NO_COLOR_FORMAT)
+
+FORMATS = {
+    'currency_text': CURRENCY_FORMAT,
+    'percentage_text': PERCENTAGE_FORMAT,
+    'black_percentage_text': PERCENTAGE_NO_COLOR_FORMAT,
+    'black_float': FLOAT_NO_COLOR_FORMAT,
+    'float': FLOAT_FORMAT,
+    'integer': INTEGER_FORMAT,
+}
 
 
 def set_styles(workbook) -> Dict[str, Any]:
