@@ -2,5 +2,14 @@
     "[python]": {
         "editor.defaultFormatter": "ms-python.autopep8"
     },
-    "python.formatting.provider": "none"
+    "python.formatting.provider": "none",
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "connectString": "postgresql://arn:aws:iam::262869753078:user/grigory@tangymarket.com:arn:aws:secretsmanager:eu-central-1:262869753078:secret:rds-db-credentials/cluster-XG2KCDKG7LH5ZISGBD5CDPEMJY/postgres-zteOzM@tm-dev.cluster-cgacu38i9tik.eu-central-1.rds.amazonaws.com:5432/posgres",
+            "name": "tm-dev"
+        }
+    ]
 }

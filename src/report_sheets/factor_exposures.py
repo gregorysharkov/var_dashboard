@@ -22,8 +22,9 @@ def generate_factor_exposures_sheet(
     styles, worksheet = set_up_workbook(writer, sheet_name=SHEET_NAME)
     insert_header(worksheet, styles, layout)
 
-    data.get('macro_factor_decomp_df').set_index(
-        'Macro Factor Sensitivity', inplace=True)
+    data.get('macro_factor_decomp_df')
+    # #.set_index(
+    #     'Macro Factor Sensitivity', inplace=True)
     macro_factor_decomp_df = ReportTable(
         data=data.get('macro_factor_decomp_df'),  # type: ignore
         table_name='macro_factor_decomp_df_fe',
