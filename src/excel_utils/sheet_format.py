@@ -13,3 +13,6 @@ def format_dashboard_worksheet(worksheet, layout) -> None:
 
     worksheet.set_zoom(80)
     worksheet.hide_gridlines(2)
+    worksheet.repeat_rows(0, 4)
+    worksheet.print_area(0, 0, 250, len(layout.columns)+1)
+    worksheet.fit_to_pages(1, 0)

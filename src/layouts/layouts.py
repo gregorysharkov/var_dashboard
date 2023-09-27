@@ -77,6 +77,19 @@ class DashboardLayout:
 
         return n_row * self.PIXELS_PER_HEIGHT
 
+    @property
+    def columns(self) -> str:
+        '''returns the name of the last column in the layout'''
+
+        all_values = set(
+            self.CATEGORY_COLUMNS +
+            self.NUMERIC_COLUMNS +
+            self.MIDDLE_COLUMNS +
+            self.SIDE_COLUMNS
+        )
+
+        return list(all_values)
+
 
 class NarrowDashboardLayout(DashboardLayout):
     SIDE_COLUMNS = ['A', 'Q']
