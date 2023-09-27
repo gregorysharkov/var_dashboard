@@ -854,24 +854,6 @@ def stress_test_beta_price_vol_exposure_by_position(
     factor.set_index(["Factor Names"], inplace=True)
     factor_betas.columns = [factor_betas.columns[0]] + list(factor.index)
     # agg positions by exposure across fund strats
-    position_agg_exposure = (
-        position.groupby(
-            [
-                "RFID",
-            ]
-        )
-        .agg(
-            {
-                "TradeDate": "first",
-                "FundName": "first",
-                "UnderlierName": "first",
-                "VaRTicker": "first",
-                "MarketValue": "sum",
-                "Exposure": "sum",
-            }
-        )
-        .reset_index()
-    )
     price_shock_list = [-0.01, -0.1]
 
     position_non_option = position.loc[
@@ -1014,9 +996,6 @@ def stress_test_beta_price_vol_exposure_by_position(
     price_shock_df = pd.merge(price_shock_df, beta_spx, on=["ID"], how="left")
     price_shock_df = pd.merge(
         price_shock_df, position_vols, on=["ID"], how="left")
-    price_shock_df["stdev"] = price_shock_df["stdev"] / abs(
-        price_shock_df["MarketValue"]
-    )
     spx_vol = np.sqrt(
         matrix_cov.loc[matrix_cov.index == "SPX Index"]["SPX Index"])
     price_shock_df["Correl"] = (
@@ -1078,6 +1057,36 @@ def stress_test_beta_price_vol_exposure_by_position(
             "Dollar Theta 1D",
         ]
     ]
+    position_breakdown.reset_index(inplace=True)
+    position_breakdown_agg = (
+        position_breakdown.groupby(
+            [
+                "Position",
+            ]
+        )
+        .agg(
+            {
+                "Underlier": "sum",
+                "Shares/Contracts": "sum",
+                "Exposure": "sum",
+                "Beta": "first",
+                "Correl": "first",
+                "Volatility": "first",
+                "MarketValue": "sum",
+                "1% Shock $": "sum",
+                "1% Shock %": "sum",
+                "Dollar Delta": "sum",
+                "Dollar Gamma 1%": "sum",
+                "Dollar Vega 1%": "sum",
+                "Dollar Theta 1D": "sum",
+                "10% Shock $": "sum",
+                "10% Shock %": "sum",
+            }
+        )
+    )
+    position_breakdown = position_breakdown_agg.copy()
+    position_breakdown.reset_index(inplace=True)
+    position_breakdown.set_index(["Underlier"], inplace=True)
     position_summary = position_breakdown[cols]
     position_summary.reset_index(inplace=True, drop=True)
     position_summary.set_index(["Position"], inplace=True)

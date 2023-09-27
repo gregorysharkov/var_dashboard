@@ -1,15 +1,13 @@
 import logging
-from itertools import product
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
-from helper import imply_SMB_GMV, option_price
 
 pd.set_option("mode.chained_assignment", None)
+from itertools import product
+from typing import Dict, List
 
+from helper import imply_SMB_GMV, option_price
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -74,8 +72,7 @@ def decay_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
         factor_prices.iloc[1:, :] / factor_prices.iloc[1:, :].shift(1)
     )
     factor_returns = imply_SMB_GMV(factor_returns)
-    nn = np.linspace(start=1, stop=len(
-        factor_returns), num=len(factor_returns))
+    nn = np.linspace(start=1, stop=len(factor_returns), num=len(factor_returns))
     df = ((1 - 0.94) * 0.94 ** (nn - 1)) ** (0.5)
     df_tmp = np.repeat(df, len(factor_returns.columns))
     df_tmp = df_tmp.reshape(len(df), len(factor_returns.columns))
@@ -125,7 +122,7 @@ def filter_VaR95(
     date = factor_prices.index[-1]
     filter_item = "VaRTicker"
     position_grouped = position.groupby([filter_item])
-    for name, group in tqdm(position_grouped, 'filter_VaR95'):
+    for name, group in position_grouped:
         if isinstance(name, tuple):
             name = name[0]
         tmp = (
@@ -139,8 +136,7 @@ def filter_VaR95(
         )
         exposure = tmp["Exposure"].values
         fund_positions = tmp["VaRTicker"]
-        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(
-            fund_positions)]
+        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(fund_positions)]
         VaR95 = (
             exposure[:, None].T
             @ factor_betas_fund.values[:, 1:]
@@ -149,10 +145,10 @@ def filter_VaR95(
             @ exposure[:, None]
         ) ** (0.5)
         dict[name] = (VaR95[:, 0] * 1.644854) / firm_NAV
-        # LOGGER.info(
-        #     f"estimating  port VaR 95 of {name} as of date {date} within"
-        #     f"filter {filter_item}"
-        # )
+        LOGGER.info(
+            f"estimating  port VaR 95 of {name} as of date {date} within"
+            f"filter {filter_item}"
+        )
     VaR95_df = pd.DataFrame(dict).T
     VaR95_df = pd.DataFrame(
         VaR95_df.values,
@@ -217,7 +213,7 @@ def filter_VaR99(
     date = factor_prices.index[-1]
     filter_item = "VaRTicker"
     position_grouped = position.groupby([filter_item])
-    for name, group in tqdm(position_grouped, 'filter_VaR99'):
+    for name, group in position_grouped:
         if isinstance(name, tuple):
             name = name[0]
         tmp = (
@@ -231,8 +227,7 @@ def filter_VaR99(
         )
         exposure = tmp["Exposure"].values
         fund_positions = tmp["VaRTicker"]
-        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(
-            fund_positions)]
+        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(fund_positions)]
         VaR99 = (
             exposure[:, None].T
             @ factor_betas_fund.values[:, 1:]
@@ -241,10 +236,10 @@ def filter_VaR99(
             @ exposure[:, None]
         ) ** (0.5)
         dict[name] = (VaR99[:, 0] * 2.326348) / firm_NAV
-        # LOGGER.info(
-        #     f"estimating  port VaR 99 of {name} as of date {date} within"
-        #     f"filter {filter_item}"
-        # )
+        LOGGER.info(
+            f"estimating  port VaR 99 of {name} as of date {date} within"
+            f"filter {filter_item}"
+        )
     VaR99_df = pd.DataFrame(dict).T
     VaR99_df = pd.DataFrame(
         VaR99_df.values,
@@ -312,7 +307,7 @@ def filter_VaR95_iso(
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
         dict = {}
-        for name, group in tqdm(position_grouped, 'filter_VaR95_iso'):
+        for name, group in position_grouped:
             if isinstance(name, tuple):
                 name = name[0]
             tmp = (
@@ -337,10 +332,10 @@ def filter_VaR95_iso(
                 @ exposure[:, None]
             ) ** (0.5)
             dict[name] = (VaR95_iso[:, 0] * 1.644854) / firm_NAV
-            # LOGGER.info(
-            #     f"estimating  port VaR 95 of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
+            LOGGER.info(
+                f"estimating  port VaR 95 of {name} as of date {date} within"
+                f"filter {filter_item}"
+            )
         VaR95_iso_df = pd.DataFrame(dict).T
         VaR95_iso_df = pd.DataFrame(
             VaR95_iso_df.values,
@@ -386,7 +381,7 @@ def filter_VaR99_iso(
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
         dict = {}
-        for name, group in tqdm(position_grouped, 'filter_VaR99_iso'):
+        for name, group in position_grouped:
             if isinstance(name, tuple):
                 name = name[0]
             tmp = (
@@ -411,10 +406,10 @@ def filter_VaR99_iso(
                 @ exposure[:, None]
             ) ** (0.5)
             dict[name] = (VaR99_iso[:, 0] * 2.326348) / firm_NAV
-            # LOGGER.info(
-            #     f"estimating  port VaR 99 of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
+            LOGGER.info(
+                f"estimating  port VaR 99 of {name} as of date {date} within"
+                f"filter {filter_item}"
+            )
         VaR99_iso_df = pd.DataFrame(dict).T
         VaR99_iso_df = pd.DataFrame(
             VaR99_iso_df.values,
@@ -456,9 +451,9 @@ def filter_VaR95_inc(
     total_exposure = position_agg_exposure["Exposure"].values
     VaR95_total = (
         total_exposure[:, None].T
-        @ factor_betas.drop('ID', axis=1).values
+        @ factor_betas.values[:, 1:]
         @ matrix_cov.values[1:, 1:]
-        @ factor_betas.drop('ID', axis=1).values.T
+        @ factor_betas.values[:, 1:].T
         @ total_exposure[:, None]
     ) ** (0.5) * 1.644854
     filter_VaR95_inc_df_list = []  # contains all computed results across all filters
@@ -468,7 +463,7 @@ def filter_VaR95_inc(
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
         dict = {}
-        for name, group in tqdm(position_grouped, 'filter_VaR95_inc'):
+        for name, group in position_grouped:
             if isinstance(name, tuple):
                 name = name[0]
             tmp = position.loc[position[filter_item] != name]
@@ -494,13 +489,12 @@ def filter_VaR95_inc(
                 @ exposure[:, None]
             ) ** (0.5)
             dict[name] = (
-                (VaR95_total - (VaR95_inc[:, 0] *
-                 1.644854)) / firm_NAV.values[:, None]
+                (VaR95_total - (VaR95_inc[:, 0] * 1.644854)) / firm_NAV.values[:, None]
             )[0, :]
-            # LOGGER.info(
-            #     f"estimating  port VaR 95 of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
+            LOGGER.info(
+                f"estimating  port VaR 95 of {name} as of date {date} within"
+                f"filter {filter_item}"
+            )
         VaR95_inc_df = pd.DataFrame(dict).T
         VaR95_inc_df = pd.DataFrame(
             VaR95_inc_df.values,
@@ -554,7 +548,7 @@ def filter_VaR99_inc(
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
         dict = {}
-        for name, group in tqdm(position_grouped, 'filter_VaR99_inc'):
+        for name, group in position_grouped:
             if isinstance(name, tuple):
                 name = name[0]
             tmp = position.loc[position[filter_item] != name]
@@ -580,13 +574,12 @@ def filter_VaR99_inc(
                 @ exposure[:, None]
             ) ** (0.5)
             dict[name] = (
-                (VaR99_total - (VaR99_inc[:, 0] *
-                 2.326348)) / firm_NAV.values[:, None]
+                (VaR99_total - (VaR99_inc[:, 0] * 2.326348)) / firm_NAV.values[:, None]
             )[0, :]
-            # LOGGER.info(
-            #     f"estimating  port VaR 99 of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
+            LOGGER.info(
+                f"estimating  port VaR 99 of {name} as of date {date} within"
+                f"filter {filter_item}"
+            )
         VaR99_inc_df = pd.DataFrame(dict).T
         VaR99_inc_df = pd.DataFrame(
             VaR99_inc_df.values,
@@ -632,7 +625,7 @@ def filter_Var95_comp(
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
         dict = {}
-        for name, group in tqdm(position_grouped, 'filter_Var95_comp'):
+        for name, group in position_grouped:
             if isinstance(name, tuple):
                 name = name[0]
             tmp = (
@@ -655,10 +648,10 @@ def filter_Var95_comp(
                 @ exposure[:, None]
             ).sum()
             dict[name] = filter_mvar_95 / firm_NAV
-            # LOGGER.info(
-            #     f"estimating VaR 95 comp of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
+            LOGGER.info(
+                f"estimating VaR 95 comp of {name} as of date {date} within"
+                f"filter {filter_item}"
+            )
 
         VaR95_comp_df = pd.DataFrame(dict).T
         VaR95_comp_df = pd.DataFrame(
@@ -705,7 +698,7 @@ def filter_Var99_comp(
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
         dict = {}
-        for name, group in tqdm(position_grouped, 'filter_Var99_comp'):
+        for name, group in position_grouped:
             if isinstance(name, tuple):
                 name = name[0]
             tmp = (
@@ -728,10 +721,10 @@ def filter_Var99_comp(
                 @ exposure[:, None]
             ).sum()
             dict[name] = filter_mvar_99 / firm_NAV
-            # LOGGER.info(
-            #     f"estimating VaR 99 comp of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
+            LOGGER.info(
+                f"estimating VaR 99 comp of {name} as of date {date} within"
+                f"filter {filter_item}"
+            )
 
         VaR99_comp_df = pd.DataFrame(dict).T
         VaR99_comp_df = pd.DataFrame(
@@ -882,10 +875,8 @@ def VaR_structuring(
     VaR_position_df = VaR_position_df.drop_duplicates(keep="first")
     cols = [col for col in VaR_position_df.columns if col != "VaRTicker"]
     VaR_position_df = VaR_position_df[cols]
-    VaR_position_df = VaR_position_df.sort_values(
-        ["VaRTicker_Iso95"], ascending=False)
-    VaR_position_df.columns = VaR_position_df.columns.str.replace(
-        "VaRTicker_", "")
+    VaR_position_df = VaR_position_df.sort_values(["VaRTicker_Iso95"], ascending=False)
+    VaR_position_df.columns = VaR_position_df.columns.str.replace("VaRTicker_", "")
     VaR_position_top10 = VaR_position_df.iloc[:10]
     VaR_position_bottom10 = VaR_position_df.iloc[-10:]
     VaR_position_top10.rename(
@@ -910,8 +901,7 @@ def VaR_structuring(
     VaR_industry_df.reset_index(inplace=True)
     VaR_industry_df.rename(columns={"index": "Industry VaR"}, inplace=True)
     VaR_industry_df.set_index(["Industry VaR"], inplace=True)
-    VaR_industry_df.columns = VaR_industry_df.columns.str.replace(
-        "Industry_", "")
+    VaR_industry_df.columns = VaR_industry_df.columns.str.replace("Industry_", "")
     VaR_country_df = pd.concat(country_list, axis=1)
     VaR_country_df.reset_index(inplace=True)
     VaR_country_df.rename(columns={"index": "Country VaR"}, inplace=True)
@@ -921,8 +911,7 @@ def VaR_structuring(
     VaR_mktcap_df.reset_index(inplace=True)
     VaR_mktcap_df.rename(columns={"index": "MarketCap VaR"}, inplace=True)
     VaR_mktcap_df.set_index(["MarketCap VaR"], inplace=True)
-    VaR_mktcap_df.columns = VaR_mktcap_df.columns.str.replace(
-        "MarketCap.1_", "")
+    VaR_mktcap_df.columns = VaR_mktcap_df.columns.str.replace("MarketCap.1_", "")
 
     return (
         VaR_position_top10,
@@ -955,10 +944,7 @@ def filter_stress_test_price_vol(
     stress_test_price_vol_exposure_dict = {}
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
-        for filter_name, filter_group in tqdm(
-            position_grouped,
-            f'Stress test price for group: {filter_item}',
-        ):
+        for filter_name, filter_group in position_grouped:
             if isinstance(filter_name, tuple):
                 filter_name = filter_name[0]
             for shock in shock_params_list:
@@ -1005,8 +991,7 @@ def filter_stress_test_price_vol(
                         - position_non_option["Exposure"]
                     )
                     shock_pnl += position_non_option["shock_pnl"].sum()
-                    shock_exposure = position_non_option["shock_exposure"].sum(
-                    )
+                    shock_exposure = position_non_option["shock_exposure"].sum()
                 position_option = filter_group.loc[
                     filter_group["SECURITY_TYP"].str.contains(
                         "|".join(["call", "option", "put"]),
@@ -1036,8 +1021,7 @@ def filter_stress_test_price_vol(
                         * position_option["FXRate"]
                     )
                     position_option["shock_exposure"] = (
-                        position_option["shock_value"] -
-                        position_option["Exposure"]
+                        position_option["shock_value"] - position_option["Exposure"]
                     )
                     position_option["shock_pnl"] = (position_option["shock_value"]) - (
                         position_option["MarketPrice"]
@@ -1053,8 +1037,7 @@ def filter_stress_test_price_vol(
                 stress_test_price_vol_exposure_dict[
                     f"{filter_name}_price_shock_{price_shock}_vol_shock_{vol_shock}"
                 ] = shock_exposure
-        # LOGGER.info(
-        #     f"stress test results for price shock for group {filter_name} ")
+        LOGGER.info(f"stress test results for price shock for group {filter_name} ")
 
         stress_test_price_vol_df = pd.DataFrame(
             stress_test_price_vol_dict, index=["stress_pnl & vol shock"]
@@ -1067,12 +1050,10 @@ def filter_stress_test_price_vol(
             [date_vector, stress_test_price_vol_df], axis=1
         )
         stress_test_price_vol_exposure_df = pd.DataFrame(
-            stress_test_price_vol_exposure_dict, index=[
-                "stress_exposure & vol shock"]
+            stress_test_price_vol_exposure_dict, index=["stress_exposure & vol shock"]
         ).T
         date_vector = pd.DataFrame(
-            np.repeat(factor_prices.index[-1],
-                      len(stress_test_price_vol_exposure_df)),
+            np.repeat(factor_prices.index[-1], len(stress_test_price_vol_exposure_df)),
             index=stress_test_price_vol_exposure_df.index,
             columns=[factor_prices.index[-1]],
         )
@@ -1105,10 +1086,7 @@ def filter_stress_test_beta_price_vol(
     stress_test_beta_price_vol_dict = {}
     for filter_item in filter_list:
         position_grouped = position.groupby([filter_item])
-        for filter_name, filter_group in tqdm(
-            position_grouped,
-            f'Stress test beta for group: {filter_item}'
-        ):
+        for filter_name, filter_group in position_grouped:
             if isinstance(filter_name, tuple):
                 filter_name = filter_name[0]
             for shock in shock_params_list:
@@ -1213,17 +1191,15 @@ def filter_stress_test_beta_price_vol(
                 stress_test_beta_price_vol_dict[
                     f"{filter_name}_price_shock_" f"{price_shock}_vol_shock_{vol_shock}"
                 ] = shock_pnl
-            # LOGGER.info(
-            #     f"stress test results for beta * price shock for group {filter_name} "
-            # )
+            LOGGER.info(
+                f"stress test results for beta * price shock for group {filter_name} "
+            )
 
         stress_test_beta_price_vol_df = pd.DataFrame(
-            stress_test_beta_price_vol_dict, index=[
-                "stress_pnl_beta*price & vol shock"]
+            stress_test_beta_price_vol_dict, index=["stress_pnl_beta*price & vol shock"]
         ).T
         date_vector = pd.DataFrame(
-            np.repeat(factor_prices.index[-1],
-                      len(stress_test_beta_price_vol_df)),
+            np.repeat(factor_prices.index[-1], len(stress_test_beta_price_vol_df)),
             index=stress_test_beta_price_vol_df.index,
             columns=[factor_prices.index[-1]],
         )
@@ -1260,8 +1236,7 @@ def stress_test_structuring(
     )
     # convert stress_test_df to % from $ space
     col = stress_test_df.filter(like="stress_").columns
-    stress_test_df = stress_test_df[col] / \
-        position_agg_exposure["MarketValue"].sum()
+    stress_test_df = stress_test_df[col] / position_agg_exposure["MarketValue"].sum()
     price_shock_list = price_vol_shock_range["price_shock"]
     vol_shock_list = price_vol_shock_range["vol_shock"]
     shock_params_list = []
@@ -1269,8 +1244,7 @@ def stress_test_structuring(
         price_shock_list,
         vol_shock_list,
     ):
-        params = {"price_shock": f"price_shock_{a}",
-                  "vol_shock": f"vol_shock_{b}"}
+        params = {"price_shock": f"price_shock_{a}", "vol_shock": f"vol_shock_{b}"}
         shock_params_list.append(params)
 
     dict = {}

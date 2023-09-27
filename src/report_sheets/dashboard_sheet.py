@@ -151,7 +151,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         margin=1,
         axis_format='percentage',
     )
-    eu.insert_columns_chart(writer, worksheet, sector_exposure_chart)
+    eu.insert_chart(writer, worksheet, sector_exposure_chart)
     charts.update({table_name: sector_exposure_chart})
 
     table_name = 'macro_factor_decomp_df'
@@ -165,7 +165,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         margin=1,
         axis_format='percentage',
     )
-    eu.insert_columns_chart(
+    eu.insert_chart(
         writer, worksheet, macro_factor_sensitivity_chart)
     charts.update({table_name: macro_factor_sensitivity_chart})
 
@@ -180,7 +180,7 @@ def insert_dashboard_charts(writer, layout, worksheet, report_tables):
         margin=1,
         axis_format='percentage',
     )
-    eu.insert_columns_chart(
+    eu.insert_chart(
         writer, worksheet, sector_sensitivity_chart)
     charts.update({table_name: sector_sensitivity_chart})
     return charts

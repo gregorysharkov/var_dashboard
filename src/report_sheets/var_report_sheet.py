@@ -57,6 +57,6 @@ def generate_var_report_sheet(writer, data: List[Dict]) -> None:
         eu.insert_table(worksheet, table)
 
     for report_chart in report_charts:
-        eu.insert_columns_chart(writer, worksheet, report_chart, stacked=False)
+        eu.insert_chart(writer, worksheet, report_chart, stacked=False)
 
     format_dashboard_worksheet(worksheet, layout)

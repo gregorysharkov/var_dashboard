@@ -93,7 +93,8 @@ if __name__ == "__main__":
     # betas, VaRs, Exposures, and Stress Tests
     price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
-    # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
+    price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
+    position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
     factor_names = list(factor["Factor Names"])
     factor_names = [name for name in factor_names if str(name) != "nan"]
     factor_ids_full = list(factor["FactorID"])
@@ -188,26 +189,26 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
-        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    )
-    stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    (
-        stress_test_price_vol_calc,
-        stress_test_price_vol_exposure_calc,
-    ) = VaR.filter_stress_test_price_vol(
-        filters_dict, factor_prices, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    stress_test_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_calc, position, price_vol_shock_range
-    )
-    stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    )
+    # stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
+    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    # )
+    # stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    # (
+    #     stress_test_price_vol_calc,
+    #     stress_test_price_vol_exposure_calc,
+    # ) = VaR.filter_stress_test_price_vol(
+    #     filters_dict, factor_prices, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    # stress_test_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_calc, position, price_vol_shock_range
+    # )
+    # stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    # )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -283,7 +284,12 @@ if __name__ == "__main__":
     # 1.f. dashboard
     # Excel equivalents ["Dashboard; "Fund Exposure %" tbl; "Fund Exposures $" tbl]
     # fund exposure % tbl
-    position_agg_exposure = position.groupby(["RFID", ])\
+    position_agg_exposure = (
+        position.groupby(
+            [
+                "RFID",
+            ]
+        )
         .agg(
             {
                 "TradeDate": "first",
@@ -293,7 +299,9 @@ if __name__ == "__main__":
                 "MarketValue": "sum",
                 "Exposure": "sum",
             }
-    ).reset_index()
+        )
+        .reset_index()
+    )
     long_mkt_value_pct = tmp = (
         position.loc[position["MarketValue"] > 0]["MarketValue"].sum()
         / firm_NAV.values[0]
@@ -340,7 +348,6 @@ if __name__ == "__main__":
             ],
         }
     )
-
     fund_exp_usd_dashboard = pd.DataFrame(
         {
             "Fund Exposures $": [
@@ -448,7 +455,7 @@ if __name__ == "__main__":
             },
         ]
     )
-
+    mktcap_exposure_df.to_csv(r'data/mktcap_exposure_df.csv', sep=';')
     rsh.generate_var_report_sheet(
         writer,
         data=[
@@ -466,24 +473,24 @@ if __name__ == "__main__":
         ]
     )
 
-    rsh.generate_options_stress_sheet(
-        writer,
-        data=[
-            {
-                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-                'options_delta1_exposure_calc': options_delta1_exposure_calc,
-                # .set_index('Greek Sensitivity'),
-                'greek_sensitivities_calc': greek_sensitivities_calc,
-                'options_premium_calc': options_premium_calc.set_index('Premium'),
-            },
-            {
-                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
-            },
-            stress_test_price_vol_exposure_results_df,
-        ]
-    )
+    # rsh.generate_options_stress_sheet(
+    #     writer,
+    #     data=[
+    #         {
+    #             'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+    #             'options_delta1_exposure_calc': options_delta1_exposure_calc,
+    #             # .set_index('Greek Sensitivity'),
+    #             'greek_sensitivities_calc': greek_sensitivities_calc,
+    #             'options_premium_calc': options_premium_calc.set_index('Premium'),
+    #         },
+    #         {
+    #             'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+    #             'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+    #             'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+    #         },
+    #         stress_test_price_vol_exposure_results_df,
+    #     ]
+    # )
     drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
                     'Dollar Vega 1%', 'Dollar Theta 1D']
 

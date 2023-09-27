@@ -43,7 +43,11 @@ def generate_factor_exposures_sheet(
         margin=1,
         axis_format='percentage',
     )
-    eu.insert_series_bar_chart(writer, worksheet, macro_sensitivity_chart)
+    eu.insert_chart(
+        writer,
+        worksheet,
+        macro_sensitivity_chart,
+    )
 
     data.get('sector_factor_decomp_df').set_index(
         'Sector Sensitivities', inplace=True)
@@ -65,7 +69,7 @@ def generate_factor_exposures_sheet(
         margin=1,
         axis_format='percentage',
     )
-    eu.insert_series_bar_chart(writer, worksheet, sector_sensitivity_chart)
+    eu.insert_chart(writer, worksheet, sector_sensitivity_chart)
 
     format_dashboard_worksheet(worksheet, layout)
 

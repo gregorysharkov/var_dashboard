@@ -1,3 +1,4 @@
+'''creates pnl report sheet'''
 from typing import Dict
 
 import pandas as pd
@@ -15,7 +16,10 @@ from ..report_items.worksheet_chart import WorksheetChart
 PNLDATA_SHEET_NAME = 'PNLReport'
 
 
-def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None:
+def generate_pnlreport_sheet(
+    writer,
+    data_dict: Dict[str, pd.DataFrame]
+) -> None:
     '''generates pnl report sheet'''
 
     layout = DashboardLayout()
@@ -26,7 +30,7 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
         initial_position=(1, 5),
         initial_rows=20,
         table_name='aum_clean',
-        columns=['Daily Return',],
+        columns=['Daily Return', ],
         categories_name='index',
         page_layout=layout,
         title='Daily vs. Cumulative Returns',
@@ -37,7 +41,7 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
         initial_position=(1, 5),
         initial_rows=10,
         table_name='aum_clean',
-        columns=['Cumulative return',],
+        columns=['Cumulative return', ],
         categories_name='index',
         page_layout=layout,
     )
@@ -45,7 +49,7 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
         writer, worksheet, daily_returns_chart, cumulative_returns_chart)
 
     return_analysis_stats = ReportTable(
-        data=data_dict.get('return_analysis_stats'),
+        data=data_dict.get('return_analysis_stats'),  # type: ignore
         values_format=styles.get('percentage'),
         table_name='return_analysis_stats',
         initial_position=(1, 27),
@@ -53,7 +57,7 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
     eu.insert_table(worksheet, return_analysis_stats)
 
     comparative_analysis_stats = ReportTable(
-        data=data_dict.get('comparative_analysis_stats'),
+        data=data_dict.get('comparative_analysis_stats'),  # type: ignore
         values_format=styles.get('percentage'),
         table_name='comparative_analysis_stats',
         snap_element=return_analysis_stats,
@@ -62,4 +66,46 @@ def generate_pnlreport_sheet(writer, data_dict: Dict[str, pd.DataFrame]) -> None
     )
     eu.insert_table(worksheet, comparative_analysis_stats)
 
+    volatility_stats = WorksheetChart(
+        snap_element=return_analysis_stats,
+        snap_mode=SnapType.DOWN,
+        margin=2,
+        table_name='aum_clean',
+        columns=['Volatility', '20D Volatility'],
+        categories_name='index',
+        stacked=False,
+        title='Rolling 20 Day Volatility vs. Rolling 1 Year Volatility',
+        axis_format='percentage',
+        page_layout=layout,
+        initial_rows=20,
+    )
+
+    eu.insert_chart(
+        writer,
+        worksheet,
+        volatility_stats,
+        chart_type='line',
+        stacked=False,
+    )
+
+    volatility_budget = WorksheetChart(
+        snap_element=return_analysis_stats,
+        snap_mode=SnapType.DOWN,
+        margin=24,
+        table_name='aum_clean',
+        columns=['20D Volatility', 'Volatility Budget'],
+        categories_name='index',
+        stacked=False,
+        title='Volatility Budget',
+        axis_format='percentage',
+        page_layout=layout,
+        initial_rows=20,
+    )
+    eu.insert_chart(
+        writer,
+        worksheet,
+        volatility_budget,
+        chart_type='line',
+        stacked=False,
+    )
     format_dashboard_worksheet(worksheet, layout)

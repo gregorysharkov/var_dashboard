@@ -7,6 +7,7 @@ from typing import Callable
 import pandas as pd
 from xlsxwriter import worksheet
 
+from src.excel_utils.chart_series_setters import SERIES_SETTERS, _add_series
 from src.report_items.report_table import ReportTable
 from src.report_items.worksheet_chart import WorksheetChart
 from src.styles.styles_init import FORMATS
@@ -34,7 +35,7 @@ def merge_above(worksheet, table: ReportTable, style, text) -> None:
 def merge_to_left(worksheet, table: ReportTable, style, text) -> None:
     '''inserts merged range to the left'''
     # pylint: disable=W0621
-    (start_col, start_row), (end_col, end_row) = table.range
+    (start_col, start_row), (end_col, end_row) = table.range  # type: ignore
 
     worksheet.merge_range(start_row, start_col-1,
                           end_row, start_col-1,
@@ -153,9 +154,10 @@ def _set_manual_column_types(report_table):
     return return_list
 
 
-def insert_columns_chart(
+def insert_chart(
     workbook, worksheet,
     worksheet_chart: WorksheetChart,
+    chart_type: str = 'column',
     stacked: bool = True,
 ) -> None:
     '''
@@ -164,86 +166,88 @@ def insert_columns_chart(
     Args:
         workbook: active workbook
         worksheet: active worksheet
-        position: tuple with x and y coordinates
-        size: tuple with width and height
+        worksheet_chart: Instance of worksheet chart
+        chart_type; type of the chart (column or line for example)
+        stacked: boolean flag whether to stack the series
     '''
-    chart, position = _create_column_chart(workbook, worksheet_chart, stacked)
-    worksheet.insert_chart(row=position[1], col=position[0], chart=chart)
-
-
-def insert_series_bar_chart(
-    workbook, worksheet,
-    worksheet_chart: WorksheetChart,
-) -> None:
-    '''inserts a chart whose x axis is a time axis'''
-
-    chart, position = _set_series_bar_chart(workbook, worksheet_chart)
+    chart, position = _set_chart_object(
+        workbook, worksheet_chart, chart_type, stacked)
     worksheet.insert_chart(row=position[1], col=position[0], chart=chart)
 
 
 def insert_dual_axis_chart(
     workbook,
     worksheet,
-    worksheet_chart_bars,
-    worksheet_chart_line
+    worksheet_chart_bars: WorksheetChart,
+    worksheet_chart_line: WorksheetChart
 ) -> None:
-    '''adds dual axis chart'''
+    '''
+    adds dual axis chart
 
-    bar_chart, bar_chart_position = _set_series_bar_chart(
-        workbook, worksheet_chart_bars)
-    series_chart, _ = _set_series_line_chart(
-        workbook, worksheet_chart_line)
+    Args:
+        workbook: excel object
+        worksheet: worksheet of the workbook, where the chart should
+                   be inserted
+        worksheet_chart_bars: WorksheetChart that will contain bars
+        worksheet_chart_lines: line chart to be added to the bars chart
+    '''
+
+    bar_chart, bar_chart_position = _set_chart_object(
+        workbook=workbook,
+        worksheet_chart=worksheet_chart_bars,
+        chart_type='column',
+        stacked=True,
+        series_type='time_series',
+    )
+    series_chart, _ = _set_chart_object(
+        workbook=workbook,
+        worksheet_chart=worksheet_chart_line,
+        chart_type='line',
+        stacked=False,
+        series_type='time_series',
+    )
     bar_chart.combine(series_chart)
 
     worksheet.insert_chart(
-        row=bar_chart_position[1], col=bar_chart_position[0], chart=bar_chart)
+        row=bar_chart_position[1],
+        col=bar_chart_position[0],
+        chart=bar_chart
+    )
 
 
-def _set_series_line_chart(workbook, worksheet_chart):
-    '''adds a line that follows values'''
-
-    chart = _create_stacked_line_chart_type(workbook)
+def _set_chart_object(
+    workbook,
+    worksheet_chart,
+    chart_type: str = 'column',
+    stacked=True,
+    series_type: str = 'default',
+):
+    '''
+    function is responsible for correct setting of the chart object itself:
+    Proper chart type, proper axis format, add series
+    returns a chart object and its position
+    '''
+    chart = _create_chart(workbook, chart_type, stacked)
     _set_chart_title(worksheet_chart, chart)
-    _add_bar_series(worksheet_chart, chart, _add_time_series)
-    _set_axis_format(chart, FORMATS.get(f'{worksheet_chart.axis_format}_text'))
+    _set_axis_format(
+        chart,
+        FORMATS.get(f'{worksheet_chart.axis_format}_text')  # type: ignore
+    )
     position = _format_chart(worksheet_chart, chart)
+    _add_column_series(
+        worksheet_chart,
+        chart,
+        SERIES_SETTERS.get(series_type, _add_series)
+    )
     return chart, position
 
 
-def _set_series_bar_chart(workbook, worksheet_chart):
-    '''adds time series chart'''
-
-    chart = _create_bar_chart_type(workbook)
-    _set_chart_title(worksheet_chart, chart)
-    _add_bar_series(worksheet_chart, chart, _add_time_series)
-    _set_axis_format(chart, FORMATS.get(f'{worksheet_chart.axis_format}_text'))
-    position = _format_chart(worksheet_chart, chart)
-    return chart, position
-
-
-def _create_column_chart(workbook, worksheet_chart, stacked=True):
-    chart = _create_bar_chart_type(workbook, stacked)
-    _set_chart_title(worksheet_chart, chart)
-    _set_axis_format(chart, FORMATS.get(f'{worksheet_chart.axis_format}_text'))
-    position = _format_chart(worksheet_chart, chart)
-    _add_bar_series(worksheet_chart, chart, _add_series)
-    return chart, position
-
-
-def _create_bar_chart_type(workbook, stacked=True):
-    chart_options = {'type': 'column', }
+def _create_chart(workbook, chart_type: str = 'column', stacked=True):
+    chart_options = {'type': chart_type, }
     if stacked:
-        chart_options.update({'subtype': 'stacked', })
+        chart_options.update({'subtype': 'stacked', })  # type: ignore
     chart = workbook.add_chart(chart_options)
 
-    return chart
-
-
-def _create_stacked_line_chart_type(workbook):
-    chart = workbook.add_chart({
-        'type': 'line',
-        'subtype': 'stacked',
-    })
     return chart
 
 
@@ -260,12 +264,15 @@ def _set_chart_title(worksheet_chart, chart):
     })
 
 
-def _add_bar_series(worksheet_chart, chart, series_setter: Callable):
+def _add_column_series(worksheet_chart, chart, series_setter: Callable):
+    '''adds series defined in worksheet_chart to the chart object'''
     color_generator = cycle(['#ED7D31', '#4472C4'])
     for column in worksheet_chart.columns:
-        series_setter(chart, worksheet_chart.table_name,  # type: ignore
-                      column, worksheet_chart.categories_name,
-                      next(color_generator))
+        series_setter(
+            chart, worksheet_chart.table_name,  # type: ignore
+            column, worksheet_chart.categories_name,
+            next(color_generator)
+        )
 
 
 def _format_chart(worksheet_chart, chart):
@@ -274,39 +281,4 @@ def _format_chart(worksheet_chart, chart):
     size = worksheet_chart.size
     chart.set_legend({'position': 'bottom'})
     chart.set_size({'width': size[0], 'height': size[1]})
-    # chart.set_style(11)
     return position
-
-
-def _add_series(
-    chart,
-    table_name: str,
-    column_name: str,
-    categories: str,
-    color: str
-) -> None:
-    '''adds a series to the given chart'''
-    chart.add_series({
-        'values': f'={table_name}[{column_name}]',
-        'categories': f'={table_name}[{categories}]',
-        'name': column_name,
-        'fill': {'color': color},
-    })
-
-
-def _add_time_series(
-    chart,
-    table_name: str,
-    column_name: str,
-    categories,
-    color: str
-) -> None:
-    '''adds time series to the given chart'''
-    chart.add_series({
-        'values': f'={table_name}[{column_name}]',
-        'categories': f'={table_name}[{categories}]',
-        'name': column_name,
-        'fill': {'color':  color},
-        # 'y2_axis': True,
-    })
-    chart.set_x_axis({'date_axis': True})
