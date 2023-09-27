@@ -12,3 +12,4 @@ def format_dashboard_worksheet(worksheet, layout) -> None:
         worksheet.set_column(f'{col}:{col}', layout.MIDDLE_COLUMNS_WIDTH)
 
     worksheet.set_zoom(80)
+    worksheet.hide_gridlines(2)
