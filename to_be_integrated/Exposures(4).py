@@ -3,6 +3,7 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
+
 from helper import option_price
 
 logging.basicConfig(level=logging.INFO)
@@ -65,19 +66,24 @@ def filter_exposure_calc(
     ).T
     exposure_calc_df = pd.concat([exposure_calc_df], axis=1)
     # strat
-    strat_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains("Fund")]
+    strat_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains(
+        "Fund")]
     strat_df.reset_index(inplace=True)
     strat_df.rename(columns={"index": "Strategy Exposure"}, inplace=True)
-    strat_df["Strategy Exposure"].replace({"FundName_": ""}, regex=True, inplace=True)
+    strat_df["Strategy Exposure"].replace(
+        {"FundName_": ""}, regex=True, inplace=True)
     strat_df.set_index(["Strategy Exposure"], inplace=True)
     # sector
-    sector_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains("Sector")]
+    sector_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains(
+        "Sector")]
     sector_df.reset_index(inplace=True)
     sector_df.rename(columns={"index": "Sector Exposure"}, inplace=True)
-    sector_df["Sector Exposure"].replace({"Sector_": ""}, regex=True, inplace=True)
+    sector_df["Sector Exposure"].replace(
+        {"Sector_": ""}, regex=True, inplace=True)
     sector_df.set_index(["Sector Exposure"], inplace=True)
     # industry
-    industry_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains("Industry")]
+    industry_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains(
+        "Industry")]
     industry_df.reset_index(inplace=True)
     industry_df.rename(columns={"index": "Industry Exposure"}, inplace=True)
     industry_df["Industry Exposure"].replace(
@@ -85,13 +91,16 @@ def filter_exposure_calc(
     )
     industry_df.set_index(["Industry Exposure"], inplace=True)
     # country
-    country_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains("Country")]
+    country_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains(
+        "Country")]
     country_df.reset_index(inplace=True)
     country_df.rename(columns={"index": "Country Exposure"}, inplace=True)
-    country_df["Country Exposure"].replace({"Country_": ""}, regex=True, inplace=True)
+    country_df["Country Exposure"].replace(
+        {"Country_": ""}, regex=True, inplace=True)
     country_df.set_index(["Country Exposure"], inplace=True)
     # market cap
-    mktcap_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains("MarketCap")]
+    mktcap_df = exposure_calc_df.loc[exposure_calc_df.index.str.contains(
+        "MarketCap")]
     mktcap_df.reset_index(inplace=True)
     mktcap_df.rename(columns={"index": "Market Cap Exposure"}, inplace=True)
     mktcap_df["Market Cap Exposure"].replace(
@@ -176,9 +185,11 @@ def filter_beta_adj_exposure_calc(
                 ]
                 equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
                 long_exposure_tmp["beta_adj_exposure"] = (
-                    equity_mkt_beta_group.values * long_exposure_tmp["Exposure"]
+                    equity_mkt_beta_group.values *
+                    long_exposure_tmp["Exposure"]
                 )
-                long_exposure_calc = long_exposure_tmp["beta_adj_exposure"].sum()
+                long_exposure_calc = long_exposure_tmp["beta_adj_exposure"].sum(
+                )
             else:
                 long_exposure_calc = 0
             if not short_exposure_tmp.empty:
@@ -189,9 +200,11 @@ def filter_beta_adj_exposure_calc(
                 ]
                 equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
                 short_exposure_tmp["beta_adj_exposure"] = (
-                    equity_mkt_beta_group.values * short_exposure_tmp["Exposure"]
+                    equity_mkt_beta_group.values *
+                    short_exposure_tmp["Exposure"]
                 )
-                short_exposure_calc = short_exposure_tmp["beta_adj_exposure"].sum()
+                short_exposure_calc = short_exposure_tmp["beta_adj_exposure"].sum(
+                )
             else:
                 short_exposure_calc = 0
             gross_exposure_calc = long_exposure_calc + abs(short_exposure_calc)
@@ -228,14 +241,16 @@ def filter_beta_adj_exposure_calc(
     ]
     sector_df.reset_index(inplace=True)
     sector_df.rename(columns={"index": "Sector Beta Exposure"}, inplace=True)
-    sector_df["Sector Beta Exposure"].replace({"Sector_": ""}, regex=True, inplace=True)
+    sector_df["Sector Beta Exposure"].replace(
+        {"Sector_": ""}, regex=True, inplace=True)
     sector_df.set_index(["Sector Beta Exposure"], inplace=True)
     # industry
     industry_df = beta_adj_exposure_calc_df.loc[
         beta_adj_exposure_calc_df.index.str.contains("Industry")
     ]
     industry_df.reset_index(inplace=True)
-    industry_df.rename(columns={"index": "Industry Beta Exposure"}, inplace=True)
+    industry_df.rename(
+        columns={"index": "Industry Beta Exposure"}, inplace=True)
     industry_df["Industry Beta Exposure"].replace(
         {"Industry_": ""}, regex=True, inplace=True
     )
@@ -255,7 +270,8 @@ def filter_beta_adj_exposure_calc(
         beta_adj_exposure_calc_df.index.str.contains("MarketCap")
     ]
     mktcap_df.reset_index(inplace=True)
-    mktcap_df.rename(columns={"index": "Market Cap Beta Exposure"}, inplace=True)
+    mktcap_df.rename(
+        columns={"index": "Market Cap Beta Exposure"}, inplace=True)
     mktcap_df["Market Cap Beta Exposure"].replace(
         {"MarketCap.1_": ""}, regex=True, inplace=True
     )
@@ -346,7 +362,8 @@ def filter_options_delta_adj_exposure(position: pd.DataFrame) -> pd.DataFrame:
 
 def filter_options_delta_unadj_exposure(position: pd.DataFrame) -> pd.DataFrame:
     options_exposure_delta1_calc_dict = {}
-    position["delta_1_exposure"] = (1 / abs(position["Delta"])) * position["Exposure"]
+    position["delta_1_exposure"] = (
+        1 / abs(position["Delta"])) * position["Exposure"]
     position_grouped = position.groupby("FundName")
     for strat_name, strat_group in position_grouped:
         expiry_grouped = strat_group.groupby(["Expiry"])
@@ -393,10 +410,14 @@ def filter_options_delta_unadj_exposure(position: pd.DataFrame) -> pd.DataFrame:
                         )
                     )
                 ]
-            long_call_exposure_calc = long_call_exposure["delta_1_exposure"].sum()
-            short_call_exposure_calc = short_call_exposure["delta_1_exposure"].sum()
-            long_put_exposure_calc = long_put_exposure["delta_1_exposure"].sum()
-            short_put_exposure_calc = short_put_exposure["delta_1_exposure"].sum()
+            long_call_exposure_calc = long_call_exposure["delta_1_exposure"].sum(
+            )
+            short_call_exposure_calc = short_call_exposure["delta_1_exposure"].sum(
+            )
+            long_put_exposure_calc = long_put_exposure["delta_1_exposure"].sum(
+            )
+            short_put_exposure_calc = short_put_exposure["delta_1_exposure"].sum(
+            )
             options_exposure_delta1_calc_dict[
                 f"{strat_name}_{expiry_date}_delta1_options_exposure"
             ] = [
@@ -420,7 +441,8 @@ def filter_options_delta_unadj_exposure(position: pd.DataFrame) -> pd.DataFrame:
         options_exposure_delta1_calc_df["Option Notional"]
     ).dt.strftime("%Y-%m-%d")
     options_exposure_delta1_calc_df.reset_index(inplace=True, drop=True)
-    options_exposure_delta1_calc_df.set_index(["Option Notional"], inplace=True)
+    options_exposure_delta1_calc_df.set_index(
+        ["Option Notional"], inplace=True)
 
     return options_exposure_delta1_calc_df
 
@@ -447,22 +469,28 @@ def filter_options_premium(position: pd.DataFrame) -> pd.DataFrame:
             ]
             if not position_option.empty:
                 call_exposure = expiry_group.loc[
-                    (expiry_group["PutCall"].str.contains("call", na=False, case=False))
+                    (expiry_group["PutCall"].str.contains(
+                        "call", na=False, case=False))
                 ]
                 call_exposure["intrinsic_value"] = np.where(
-                    call_exposure["UndlPrice"].values - call_exposure["Strike"].values
+                    call_exposure["UndlPrice"].values -
+                    call_exposure["Strike"].values
                     < 0,
                     0,
-                    call_exposure["UndlPrice"].values - call_exposure["Strike"].values,
+                    call_exposure["UndlPrice"].values -
+                    call_exposure["Strike"].values,
                 )
                 put_exposure = expiry_group.loc[
-                    (expiry_group["PutCall"].str.contains("put", na=False, case=False))
+                    (expiry_group["PutCall"].str.contains(
+                        "put", na=False, case=False))
                 ]
                 put_exposure["intrinsic_value"] = np.where(
-                    put_exposure["Strike"].values - put_exposure["UndlPrice"].values
+                    put_exposure["Strike"].values -
+                    put_exposure["UndlPrice"].values
                     < 0,
                     0,
-                    put_exposure["Strike"].values - put_exposure["UndlPrice"].values,
+                    put_exposure["Strike"].values -
+                    put_exposure["UndlPrice"].values,
                 )
             call_premium_calc = call_exposure["premium"].sum()
             call_intrinsic_calc = call_exposure["intrinsic_value"].sum()
@@ -580,10 +608,13 @@ def factor_decomp_filtered(
         .reset_index()
     )
     factor_vol = np.sqrt(
-        pd.Series(np.diag(matrix_cov.iloc[1:, 1:]), index=factor_betas.columns[1:])
+        pd.Series(np.diag(matrix_cov.iloc[1:, 1:]),
+                  index=factor_betas.columns[1:])
     )
-    macro_factor_df = factor.loc[factor["factor_group"] == "macro"][["Factor Names"]]
-    sector_factor_df = factor.loc[factor["factor_group"] == "sector"][["Factor Names"]]
+    macro_factor_df = factor.loc[factor["factor_group"]
+                                 == "macro"][["Factor Names"]]
+    sector_factor_df = factor.loc[factor["factor_group"]
+                                  == "sector"][["Factor Names"]]
     date = factor_prices.index[-1]
     factor_decomp_dict = {}
     position_grouped = position.groupby("FundName")
@@ -604,8 +635,10 @@ def factor_decomp_filtered(
         )
         exposure = tmp["Exposure"].values
         fund_positions = tmp["VaRTicker"]
-        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(fund_positions)]
-        strat_factor_exp = exposure[:, None].T @ factor_betas_fund.values[:, 1:]
+        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(
+            fund_positions)]
+        strat_factor_exp = exposure[:,
+                                    None].T @ factor_betas_fund.values[:, 1:]
         factor_decomp_dict[f"{strat_name}"] = strat_factor_exp[0, :]
     factor_decomp_df = pd.DataFrame(factor_decomp_dict, index=factor_vol.index)
     date_vector = pd.DataFrame(
@@ -613,7 +646,8 @@ def factor_decomp_filtered(
         index=factor_decomp_df.index,
         columns=["date"],
     )
-    factor_decomp_df = pd.concat([date_vector, factor_decomp_df, factor_vol_df], axis=1)
+    factor_decomp_df = pd.concat(
+        [date_vector, factor_decomp_df, factor_vol_df], axis=1)
     factor_decomp_df["FactorExp"] = (
         factor_decomp_df.iloc[:, 1:-1].sum(axis=1) / firm_NAV.values[0]
     )
@@ -635,11 +669,13 @@ def factor_decomp_filtered(
     macro_factor_decomp_df.rename(
         columns={"Factor Names": "Macro Factor Sensitivity"}, inplace=True
     )
-    macro_factor_decomp_df.set_index(["Macro Factor Sensitivity"], inplace=True)
+    macro_factor_decomp_df.set_index(
+        ["Macro Factor Sensitivity"], inplace=True)
     sector_factor_decomp_df = factor_decomp_df.loc[
         factor_decomp_df.index.isin(sector_factor_df["Factor Names"])
     ]
-    sector_factor_decomp_df = sector_factor_decomp_df[["FactorExp", "FactorVol"]]
+    sector_factor_decomp_df = sector_factor_decomp_df[[
+        "FactorExp", "FactorVol"]]
     sector_factor_decomp_df.reset_index(inplace=True)
     sector_factor_decomp_df.rename(
         columns={"Factor Names": "Sector Sensitivities"}, inplace=True
@@ -686,13 +722,14 @@ def factor_decomp_by_factor_position(
     # loop through column by column
     risk_factor_exposure_top_N_list = []
     risk_factor_exposure_bottom_N_list = []
-    for col in factor_beta_exposure.columns[1 : len(factor_betas.columns)]:
+    for col in factor_beta_exposure.columns[1: len(factor_betas.columns)]:
         risk_factor_exposure = pd.DataFrame(
             np.concatenate(
                 (
                     factor_beta_exposure["UnderlierName"].values[:, None],
                     (
-                        factor_beta_exposure[col] * factor_beta_exposure["Exposure"]
+                        factor_beta_exposure[col] *
+                        factor_beta_exposure["Exposure"]
                     ).values[:, None]
                     / firm_NAV.values[:, None],
                     factor_beta_exposure["Exposure"].values[:, None]
@@ -708,20 +745,24 @@ def factor_decomp_by_factor_position(
         )
         risk_factor_exposure_sorted_top_10 = risk_factor_exposure_sorted.iloc[:10, :]
         risk_factor_exposure_sorted_top_10.reset_index(inplace=True, drop=True)
-        risk_factor_exposure_sorted_top_10.set_index([f"{col} - Top 10"], inplace=True)
-        risk_factor_exposure_top_N_list.append(risk_factor_exposure_sorted_top_10)
+        risk_factor_exposure_sorted_top_10.set_index(
+            [f"{col} - Top 10"], inplace=True)
+        risk_factor_exposure_top_N_list.append(
+            risk_factor_exposure_sorted_top_10)
         risk_factor_exposure_sorted = risk_factor_exposure.sort_values(
             ["Exposure"], ascending=[True]
         )
         risk_factor_exposure_sorted_bottom_10 = risk_factor_exposure_sorted.iloc[:10, :]
-        risk_factor_exposure_sorted_bottom_10.reset_index(inplace=True, drop=True)
+        risk_factor_exposure_sorted_bottom_10.reset_index(
+            inplace=True, drop=True)
         risk_factor_exposure_sorted_bottom_10.rename(
             columns={f"{col} - Top 10": f"{col} - Bottom 10"}, inplace=True
         )
         risk_factor_exposure_sorted_bottom_10.set_index(
             [f"{col} - Bottom 10"], inplace=True
         )
-        risk_factor_exposure_bottom_N_list.append(risk_factor_exposure_sorted_bottom_10)
+        risk_factor_exposure_bottom_N_list.append(
+            risk_factor_exposure_sorted_bottom_10)
     LOGGER.info(
         "apply position agg data against factor betas to build the factor by "
         "factor top N risk contributors by position"
@@ -765,13 +806,14 @@ def factor_heat_map(
     )
     # loop through column by column
     risk_factor_exposure_df_list = []
-    for col in factor_beta_exposure.columns[1 : len(factor_betas.columns)]:
+    for col in factor_beta_exposure.columns[1: len(factor_betas.columns)]:
         risk_factor_exposure = pd.DataFrame(
             np.concatenate(
                 (
                     factor_beta_exposure["UnderlierName"].values[:, None],
                     (
-                        factor_beta_exposure[col] * factor_beta_exposure["Exposure"]
+                        factor_beta_exposure[col] *
+                        factor_beta_exposure["Exposure"]
                     ).values[:, None]
                     / firm_NAV.values[:, None],
                     factor_beta_exposure["Exposure"].values[:, None]
@@ -907,7 +949,8 @@ def stress_test_beta_price_vol_exposure_by_position(
             ].divide(firm_NAV.values[0])
             position_option["Dollar Delta"] = position_option["Exposure"]
             position_option["Dollar Gamma 1%"] = (
-                position_option["Gamma$"].astype(float) * position_option["Exposure"]
+                position_option["Gamma$"].astype(
+                    float) * position_option["Exposure"]
             )
             position_option["Dollar Vega 1%"] = (
                 position_option["Vega"] * position_option["Exposure"]
@@ -933,10 +976,12 @@ def stress_test_beta_price_vol_exposure_by_position(
                 ]
             ]
         price_shock_df_list.append(
-            pd.concat([position_non_option_brief, position_option_brief], axis=0)
+            pd.concat([position_non_option_brief,
+                      position_option_brief], axis=0)
         )
     price_shock_df = pd.concat(price_shock_df_list, axis=1)
-    price_shock_df = price_shock_df.loc[:, ~price_shock_df.columns.duplicated()]
+    price_shock_df = price_shock_df.loc[:,
+                                        ~price_shock_df.columns.duplicated()]
     LOGGER.info("estimate RFID vol")
     position_cov = position_returns.cov()
     position_vols = pd.DataFrame(
@@ -949,8 +994,10 @@ def stress_test_beta_price_vol_exposure_by_position(
     price_shock_df.rename(columns={"VaRTicker": "ID"}, inplace=True)
     beta_spx = factor_betas[["ID", "Equity"]]
     price_shock_df = pd.merge(price_shock_df, beta_spx, on=["ID"], how="left")
-    price_shock_df = pd.merge(price_shock_df, position_vols, on=["ID"], how="left")
-    spx_vol = np.sqrt(matrix_cov.loc[matrix_cov.index == "SPX Index"]["SPX Index"])
+    price_shock_df = pd.merge(
+        price_shock_df, position_vols, on=["ID"], how="left")
+    spx_vol = np.sqrt(
+        matrix_cov.loc[matrix_cov.index == "SPX Index"]["SPX Index"])
     price_shock_df["Correl"] = (
         price_shock_df["Equity"].values * spx_vol.values
     ) / price_shock_df["stdev"].values
@@ -964,7 +1011,8 @@ def stress_test_beta_price_vol_exposure_by_position(
         },
         inplace=True,
     )
-    price_shock_df["Exposure"] = price_shock_df["Exposure"] / firm_NAV.values[0]
+    price_shock_df["Exposure"] = price_shock_df["Exposure"] / \
+        firm_NAV.values[0]
     price_shock_df = price_shock_df[
         [
             "Underlier",
@@ -995,7 +1043,8 @@ def stress_test_beta_price_vol_exposure_by_position(
     position_breakdown = price_shock_df
     position_breakdown.reset_index(inplace=True, drop=True)
     position_breakdown.set_index(["Underlier"], inplace=True)
-    position_breakdown = position_breakdown.sort_values(["Exposure"], ascending=False)
+    position_breakdown = position_breakdown.sort_values(
+        ["Exposure"], ascending=False)
     cols = [
         col
         for col in position_breakdown.columns
@@ -1041,6 +1090,7 @@ def stress_test_beta_price_vol_exposure_by_position(
     position_summary = position_breakdown[cols]
     position_summary.reset_index(inplace=True, drop=True)
     position_summary.set_index(["Position"], inplace=True)
-    position_summary = position_summary.sort_values(["Exposure"], ascending=False)
+    position_summary = position_summary.sort_values(
+        ["Exposure"], ascending=False)
 
     return position_breakdown, position_summary
