@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from helper import imply_SMB_GMV, option_price
+from legacy.helper import imply_SMB_GMV, option_price
 
 pd.set_option("mode.chained_assignment", None)
 

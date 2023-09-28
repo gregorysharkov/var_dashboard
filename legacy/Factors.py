@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from helper import imply_SMB_GMV
+from legacy.helper import imply_SMB_GMV
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from helper import option_price
+from legacy.helper import option_price
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)

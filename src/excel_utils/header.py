@@ -15,5 +15,3 @@ def insert_header(worksheet, styles, layout) -> None:
         datetime.now().strftime(r'%d/%m/%Y'),
         styles.get('report_header_date')
     )
-
-    pass

@@ -7,11 +7,11 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import xlsxwriter
 
-import Exposures
-import Factors
-import pnl_stats
+import legacy.Exposures as Exposures
+import legacy.Factors as Factors
+import legacy.pnl_stats as pnl_stats
+import legacy.VaR as VaR
 import src.report_sheets as rsh
-import VaR
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
