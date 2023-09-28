@@ -45,7 +45,7 @@ def generate_var_report_sheet(writer, data: List[Dict]) -> None:
             global_snap_to=ancor_item,
             table_name=table_name,
             table_data=table_data,
-            chart_columns=['Inc95', 'Inc99'],
+            chart_columns=['Iso95', 'Iso99'],
             next_row_margin=next_row_margin,
         )
         next_row_margin = 18
