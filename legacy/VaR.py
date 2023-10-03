@@ -91,7 +91,7 @@ def matrix_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
     return factor_cov
 
 
-def filter_VaR95(
+def filter_var95(
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
     factor_betas: pd.DataFrame,
@@ -183,7 +183,7 @@ def filter_VaR95(
     return VaR95_top10, VaR95_bottom10
 
 
-def filter_VaR99(
+def filter_var99(
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
     factor_betas: pd.DataFrame,
@@ -275,7 +275,7 @@ def filter_VaR99(
     return VaR99_top10, VaR99_bottom10
 
 
-def filter_VaR95_iso(
+def filter_var95_iso(
     filter: Dict,
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
@@ -348,7 +348,7 @@ def filter_VaR95_iso(
     return filter_VaR95_iso_df_list
 
 
-def filter_VaR99_iso(
+def filter_var99_iso(
     filter: Dict,
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
@@ -422,7 +422,7 @@ def filter_VaR99_iso(
     return filter_VaR99_iso_df_list
 
 
-def filter_VaR95_inc(
+def filter_var95_inc(
     filter: Dict,
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
@@ -508,7 +508,7 @@ def filter_VaR95_inc(
     return filter_VaR95_inc_df_list
 
 
-def filter_VaR99_inc(
+def filter_var99_inc(
     filter: Dict,
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
@@ -594,7 +594,7 @@ def filter_VaR99_inc(
     return filter_VaR99_inc_df_list
 
 
-def filter_Var95_comp(
+def filter_var95_comp(
     filter: Dict,
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
@@ -667,7 +667,7 @@ def filter_Var95_comp(
     return filter_VaR95_comp_df_list
 
 
-def filter_Var99_comp(
+def filter_var99_comp(
     filter: Dict,
     factor_prices: pd.DataFrame,
     position: pd.DataFrame,
@@ -738,8 +738,12 @@ def filter_Var99_comp(
 
 def generate_var_reports(
     var_reports: List[List[pd.DataFrame]],
-    position: pd.DataFrame,
-) -> Tuple[pd.DataFrame]:
+    # position: pd.DataFrame,
+) -> Tuple[
+    pd.DataFrame, pd.DataFrame, pd.DataFrame,
+    pd.DataFrame, pd.DataFrame, pd.DataFrame,
+    pd.DataFrame
+]:
 
     # go through all Lists and pull out the FundVaR stats, SectorVaR stats,
     # IndustryVaR stats,CountryVaR stats, MktCap VaR stats into their
@@ -762,6 +766,8 @@ def generate_var_reports(
             data_group=var_report,
             groupped_data=groupped_data
         )
+
+    # inside each group prepare a dataframe that contains output information
     for key, value in groupped_data.items():
         groupped_data[key] = pd.concat(value, axis=1)
         groupped_data[key].reset_index(inplace=True)

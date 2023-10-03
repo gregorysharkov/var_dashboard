@@ -189,13 +189,13 @@ if __name__ == "__main__":
     matrix_correlation = var.matrix_correlation(factor_prices, factor)
     matrix_cov = var.matrix_cov(factor_prices)
     decay_cov = var.decay_cov(factor_prices)
-    var95_top_10, var95_bottom_10 = var.filter_VaR95(
+    var95_top_10, var95_bottom_10 = var.filter_var95(
         factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
-    var99_top_10, var99_bottom_10 = var.filter_VaR99(
+    var99_top_10, var99_bottom_10 = var.filter_var99(
         factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
-    var95_filtered_iso = var.filter_VaR95_iso(
+    var95_filtered_iso = var.filter_var95_iso(
         filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
     var_top10 = pd.merge(var95_top_10, var99_top_10,
@@ -203,23 +203,23 @@ if __name__ == "__main__":
     var_bottom10 = pd.merge(
         var95_bottom_10, var99_bottom_10, left_index=True, right_index=True
     )
-    var99_filtered_iso = var.filter_VaR99_iso(
+    var99_filtered_iso = var.filter_var99_iso(
         filters_dict, factor_prices, position,
         factor_betas, matrix_cov, firm_nav
     )
-    var95_filtered_inc = var.filter_VaR95_inc(
+    var95_filtered_inc = var.filter_var95_inc(
         filters_dict, factor_prices, position,
         factor_betas, matrix_cov, firm_nav
     )
-    var99_filtered_inc = var.filter_VaR99_inc(
+    var99_filtered_inc = var.filter_var99_inc(
         filters_dict, factor_prices, position,
         factor_betas, matrix_cov, firm_nav
     )
-    var95_filtered_comp = var.filter_Var95_comp(
+    var95_filtered_comp = var.filter_var95_comp(
         filters_dict, factor_prices, position,
         factor_betas, matrix_cov, firm_nav
     )
-    var99_filtered_comp = var.filter_Var99_comp(
+    var99_filtered_comp = var.filter_var99_comp(
         filters_dict, factor_prices, position,
         factor_betas, matrix_cov, firm_nav
     )
@@ -243,7 +243,7 @@ if __name__ == "__main__":
         var_structured_mcap,
     ) = var.generate_var_reports(
         var_reports,
-        position,
+        # position,
     )
 
     # # 1.c Stress Test functions
