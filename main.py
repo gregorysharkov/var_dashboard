@@ -2,6 +2,7 @@ import json
 import logging
 from argparse import ArgumentParser
 from datetime import datetime
+from typing import List
 
 import pandas as pd
 import pandas_market_calendars as mcal
@@ -26,6 +27,13 @@ def get_market_trading_days(start_date: str, end_date: str) -> pd.DataFrame:
         start_date=start_date, end_date=end_date)
 
     return market_trading_days_range
+
+
+def read_xlsx(xlsx_path: str, sheet_name: str, cols: List[str]) -> pd.DataFrame:
+    '''read xlsx file and return specified columns of a specified sheet'''
+
+    df = pd.read_excel(xlsx_path, sheet_name=sheet_name, header=0)
+    return df[cols]
 
 
 if __name__ == "__main__":
@@ -58,10 +66,48 @@ if __name__ == "__main__":
     # 1. Read in factors, prices, positions, AUM
     factor = pd.read_csv("data/factors.csv")
     price = pd.read_csv("data/prices.csv")
+    # TODO: date column may come as date or as Date
+    price.rename({'Date': 'date'}, axis=1, inplace=True)
     price.set_index(["date"], inplace=True)
+
+    # read and process raw positions
+    RAW_POSITION_COLS = [
+        'Expiry', 'FundName',
+        'PutCall', 'Delta', 'Quantity', 'MarketPrice',
+        'PX_POS_MULT_FACTOR', 'UndlPrice', 'Strike',
+        'Gamma$', 'Vega', 'Theta', 'MtyYears', 'IVOL_TM',
+        'FXRate', 'Description'
+    ]
+    raw_positions = read_xlsx(
+        'data/Master_VaRFactor_Engine_2.xlsm',
+        'RawPositions',
+        RAW_POSITION_COLS,
+    )
+    raw_positions['Expiry'] = pd.to_datetime(raw_positions['Expiry'])
+
+    # read and process positions
     position = pd.read_csv("data/positions.csv")
     position["MarketValue"] = position["MarketValue"].astype(float)
-    AUM = pd.read_csv("data/Historical Pnl and Nav.csv")
+    for col in RAW_POSITION_COLS:
+        position[col] = raw_positions[col]
+    # TODO: Sometimes Exposure, sometimes VaRExposure, converge to the first
+    # TODO: Sometimes MarketCap.1, sometimes MarketCap, converge to the first
+    # TODO: VarTicker -> VaRTicker
+    # TODO: UnderlierSymbol -> UnderlierName
+    position.rename(
+        {
+            'VaRExposure': 'Exposure',
+            'MarketCap': 'MarketCap.1',
+            'VarTicker': 'VaRTicker',
+            'UnderlierSymbol': 'UnderlierName',
+            'ProdType': 'SECURITY_TYP',
+        },
+        axis=1,
+        inplace=True
+    )
+    AUM = pd.read_excel("data/Historical Pnl and Nav.xlsx")
+    # AUM = pd.read_csv("data/Historical Pnl and Nav.csv",
+    #                   sep=';', decimal='.',)
     AUM_clean = pnl_stats.NAV_clean(AUM)  # model NAVs
     firm_NAV = AUM_clean.loc[AUM_clean.index == holdings_date]["EndBookNAV"]
 
@@ -94,7 +140,7 @@ if __name__ == "__main__":
     price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
     price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
-    # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
+    position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
     factor_names = list(factor["Factor Names"])
     factor_names = [name for name in factor_names if str(name) != "nan"]
     factor_ids_full = list(factor["FactorID"])
@@ -177,7 +223,7 @@ if __name__ == "__main__":
         VaR_structured_industry,
         VaR_structured_country,
         VaR_structured_mcap,
-    ) = VaR.VaR_structuring(
+    ) = VaR.var_structuring(
         VaR95_filtered_iso,
         VaR99_filtered_iso,
         VaR95_filtered_inc,
@@ -189,26 +235,26 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
-        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    )
-    stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    (
-        stress_test_price_vol_calc,
-        stress_test_price_vol_exposure_calc,
-    ) = VaR.filter_stress_test_price_vol(
-        filters_dict, factor_prices, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    stress_test_price_vol_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_calc, position, price_vol_shock_range
-    )
-    stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
-        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    )
+    # stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
+    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    # )
+    # stress_test_beta_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    # (
+    #     stress_test_price_vol_calc,
+    #     stress_test_price_vol_exposure_calc,
+    # ) = VaR.filter_stress_test_price_vol(
+    #     filters_dict, factor_prices, position, price_vol_shock_range
+    # )
+    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    # stress_test_price_vol_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_calc, position, price_vol_shock_range
+    # )
+    # stress_test_price_vol_exposure_results_df = VaR.stress_test_structuring(
+    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    # )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -455,7 +501,7 @@ if __name__ == "__main__":
             },
         ]
     )
-    mktcap_exposure_df.to_csv(r'data/mktcap_exposure_df.csv', sep=';')
+    # mktcap_exposure_df.to_csv(r'data/mktcap_exposure_df.csv', sep=';')
     rsh.generate_var_report_sheet(
         writer,
         data=[
@@ -473,24 +519,24 @@ if __name__ == "__main__":
         ]
     )
 
-    rsh.generate_options_stress_sheet(
-        writer,
-        data=[
-            {
-                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-                'options_delta1_exposure_calc': options_delta1_exposure_calc,
-                # .set_index('Greek Sensitivity'),
-                'greek_sensitivities_calc': greek_sensitivities_calc,
-                'options_premium_calc': options_premium_calc.set_index('Premium'),
-            },
-            {
-                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
-            },
-            stress_test_price_vol_exposure_results_df,
-        ]
-    )
+    # rsh.generate_options_stress_sheet(
+    #     writer,
+    #     data=[
+    #         {
+    #             'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+    #             'options_delta1_exposure_calc': options_delta1_exposure_calc,
+    #             # .set_index('Greek Sensitivity'),
+    #             'greek_sensitivities_calc': greek_sensitivities_calc,
+    #             'options_premium_calc': options_premium_calc.set_index('Premium'),
+    #         },
+    #         {
+    #             'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+    #             'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+    #             'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+    #         },
+    #         stress_test_price_vol_exposure_results_df,
+    #     ]
+    # )
     drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
                     'Dollar Vega 1%', 'Dollar Theta 1D']
 

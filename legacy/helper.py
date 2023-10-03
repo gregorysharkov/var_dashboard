@@ -1,80 +1,73 @@
-import pandas as pd
-import numpy as np
+# pylint: disable=uncallable-module
+'''helper functions used during calculations'''
+
 import logging
-from scipy.stats import expon, norm
+from typing import List
+
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
 
+PART_A_COLS = ["LD12TRUU Index", "SPX Index", "RIY less RTY", "RAG less RAV"]
+INDEX_COLS = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
+FACTOR_OPERATIONS = {
+    'RIY less RTY': INDEX_COLS[:2],
+    'RAG less RAV': INDEX_COLS[2:],
+}
+CALL_VALUES = ['Call', 'C', 'c']
+PUT_VALUES = ['Put', 'P', 'p']
 
-def imply_SMB_GMV(factor_returns: pd.DataFrame) -> pd.DataFrame:
-    # imply Small - Big, Growth - Value
-    factor_returns["RIY less RTY"] = (
-        factor_returns["RIY Index"] - factor_returns["RTY Index"]
-    )
-    factor_returns["RAG less RAV"] = (
-        factor_returns["RAG Index"] - factor_returns["RAV Index"]
-    )
-    factor_returns = factor_returns[
-        [
-            "LD12TRUU Index",
-            "SPX Index",
-            "RIY less RTY",
-            "RAG less RAV",
-        ]
-        + [
-            col
-            for col in factor_returns.columns
-            if col
-            not in [
-                "LD12TRUU Index",
-                "SPX Index",
-                "RIY Index",
-                "RTY Index",
-                "RAG Index",
-                "RAV Index",
-                "RIY less RTY",
-                "RAG less RAV",
-            ]
-        ]
+
+def imply_smb_gmv(factor_returns: pd.DataFrame) -> pd.DataFrame:
+    '''
+    imply Small - Big, Growth - Value
+    adds columns like RIY less RTY
+    selects columns in the right order
+    '''
+
+    for target_col, source_cols in FACTOR_OPERATIONS.items():
+        col_a, col_b = source_cols
+        factor_returns[target_col] = factor_returns[col_a] - \
+            factor_returns[col_b]
+
+    stop_cols = INDEX_COLS + PART_A_COLS
+    part_b_cols = [
+        col for col in factor_returns.columns
+        if col not in stop_cols
     ]
 
-    return factor_returns
-
-
-def historical_series(risk_factors: pd.DataFrame, exposure: np.ndarray, name: str):
-    ln = np.log(risk_factors.iloc[1:, :] / risk_factors.iloc[1:, :].shift(1))
-    LOGGER.info(f"processing fund {name}")
-    hist_ret = ln @ exposure
-    hist_ret = pd.DataFrame(hist_ret, columns=["fund_pnl"])
-    hist_ret.index = pd.to_datetime(hist_ret.index).strftime("%Y-%m-%d")
-
-    return hist_ret
+    return factor_returns[PART_A_COLS + part_b_cols]
 
 
 def option_price(
-    S: pd.Series, X: pd.Series, T: pd.Series, Vol: pd.Series, rf: float, type: pd.Series
-):
+    S: pd.Series,
+    X: pd.Series,
+    T: pd.Series,
+    Vol: pd.Series,
+    rf: float,
+    type: pd.Series
+) -> List[float]:
+    '''some black magic happenning here'''
+    # TODO: Make it readable
+
     price_list = []
-    for ix in range(0, len(S)):
+    for idx in range(0, len(S)):
         d1 = (
-            np.log(S.iloc[ix] / X.iloc[ix]) + (rf + Vol.iloc[ix] ** 2 / 2) * T.iloc[ix]
-        ) / (Vol.iloc[ix] * np.sqrt(T.iloc[ix]))
-        d2 = d1 - Vol.iloc[ix] * np.sqrt(T.iloc[ix])
-        if (
-            (type.iloc[ix] == "Call")
-            or (type.iloc[ix] == "C")
-            or (type.iloc[ix] == "c")
-        ):
-            price = S.iloc[ix] * norm.cdf(d1, 0, 1) - X.iloc[ix] * np.exp(
-                -rf * T.iloc[ix]
+            np.log(S.iloc[idx] / X.iloc[idx]) +  # type: ignore
+            (rf + Vol.iloc[idx] ** 2 / 2) * T.iloc[idx]
+        ) / (Vol.iloc[idx] * np.sqrt(T.iloc[idx]))
+        d2 = d1 - Vol.iloc[idx] * np.sqrt(T.iloc[idx])
+        if type.iloc[idx] in CALL_VALUES:
+            price = S.iloc[idx] * norm.cdf(d1, 0, 1) - X.iloc[idx] * np.exp(
+                -rf * T.iloc[idx]
             ) * norm.cdf(d2, 0, 1)
-        elif (
-            (type.iloc[ix] == "Put") or (type.iloc[ix] == "P") or (type.iloc[ix] == "p")
-        ):
-            price = X.iloc[ix] * np.exp(-rf * T.iloc[ix]) * norm.cdf(
+        elif type.iloc[idx] in PUT_VALUES:
+            price = X.iloc[idx] * np.exp(-rf * T.iloc[idx]) * norm.cdf(
                 -d2, 0, 1
-            ) - S.iloc[ix] * norm.cdf(-d1, 0, 1)
+            ) - S.iloc[idx] * norm.cdf(-d1, 0, 1)
 
         price_list.append(price)
 

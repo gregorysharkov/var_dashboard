@@ -11,6 +11,12 @@ LOGGER = logging.getLogger(__name__)
 
 RISK_FREE_RATE = 5.5e-2  # as of Aug 2023
 
+OPTION_TYPES = ["call", "option", "put"]
+NON_OPTION_TYPES = [
+    "fixed", "future", "public", "prefer",
+    "common", "reit", "fund", "mlp", "adr",
+]
+
 
 def filter_exposure_calc(
     filter: Dict,
@@ -18,24 +24,24 @@ def filter_exposure_calc(
     firm_NAV: float,
 ) -> pd.DataFrame:
     # agg positions by exposure across fund strats
-    position_agg_exposure = (
-        position.groupby(
-            [
-                "RFID",
-            ]
-        )
-        .agg(
-            {
-                "TradeDate": "first",
-                "FundName": "first",
-                "UnderlierName": "first",
-                "VaRTicker": "first",
-                "MarketValue": "sum",
-                "Exposure": "sum",
-            }
-        )
-        .reset_index()
-    )
+    # position_agg_exposure = (
+    #     position.groupby(
+    #         [
+    #             "RFID",
+    #         ]
+    #     )
+    #     .agg(
+    #         {
+    #             "TradeDate": "first",
+    #             "FundName": "first",
+    #             "UnderlierName": "first",
+    #             "VaRTicker": "first",
+    #             "MarketValue": "sum",
+    #             "Exposure": "sum",
+    #         }
+    #     )
+    #     .reset_index()
+    # )
     filter_list = list(filter.keys())
     exposure_calc_dict = {}
     for filter_item in filter_list:
@@ -112,27 +118,29 @@ def filter_exposure_calc(
 
 
 def filter_beta_adj_exposure_calc(
-    filter: Dict, position: pd.DataFrame, factor_betas: pd.DataFrame, firm_NAV: float
+    filter: Dict, position: pd.DataFrame,
+    factor_betas: pd.DataFrame,
+    firm_nav: float
 ) -> pd.DataFrame:
     # agg positions by exposure across fund strats
-    position_agg_exposure = (
-        position.groupby(
-            [
-                "RFID",
-            ]
-        )
-        .agg(
-            {
-                "TradeDate": "first",
-                "FundName": "first",
-                "UnderlierName": "first",
-                "VaRTicker": "first",
-                "MarketValue": "sum",
-                "Exposure": "sum",
-            }
-        )
-        .reset_index()
-    )
+    # position_agg_exposure = (
+    #     position.groupby(
+    #         [
+    #             "RFID",
+    #         ]
+    #     )
+    #     .agg(
+    #         {
+    #             "TradeDate": "first",
+    #             "FundName": "first",
+    #             "UnderlierName": "first",
+    #             "VaRTicker": "first",
+    #             "MarketValue": "sum",
+    #             "Exposure": "sum",
+    #         }
+    #     )
+    #     .reset_index()
+    # )
     equity_mkt_beta = factor_betas[["ID", "SPX Index"]]
     filter_list = list(filter.keys())
     exposure_calc_dict = {}
@@ -144,76 +152,32 @@ def filter_beta_adj_exposure_calc(
             long_exposure = group.loc[group["Exposure"] > 0]
             short_exposure = group.loc[group["Exposure"] < 0]
             # aggregate long exposures with same RFID;
-            long_exposure_tmp = (
-                long_exposure.groupby(
-                    [
-                        "RFID",
-                    ]
-                )
-                .agg(
-                    {
-                        "TradeDate": "first",
-                        "FundName": "first",
-                        "VaRTicker": "first",
-                        "Exposure": "sum",
-                    }
-                )
+            aggregations = {
+                "TradeDate": "first",
+                "FundName": "first",
+                "VaRTicker": "first",
+                "Exposure": "sum",
+            }
+
+            long_exposure_tmp = long_exposure.groupby(["RFID"])\
+                .agg(aggregations)\
                 .reset_index()
-            )
             # aggregate short exposures withsame RFID
-            short_exposure_tmp = (
-                short_exposure.groupby(
-                    [
-                        "RFID",
-                    ]
-                )
-                .agg(
-                    {
-                        "TradeDate": "first",
-                        "FundName": "first",
-                        "VaRTicker": "first",
-                        "Exposure": "sum",
-                    }
-                )
+            short_exposure_tmp = short_exposure.groupby(["RFID"])\
+                .agg(aggregations)\
                 .reset_index()
-            )
-            if not long_exposure_tmp.empty:
-                equity_mkt_beta_group = equity_mkt_beta.loc[
-                    equity_mkt_beta["ID"].isin(
-                        list(long_exposure_tmp["VaRTicker"].unique())
-                    )
-                ]
-                equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
-                long_exposure_tmp["beta_adj_exposure"] = (
-                    equity_mkt_beta_group.values *
-                    long_exposure_tmp["Exposure"]
-                )
-                long_exposure_calc = long_exposure_tmp["beta_adj_exposure"].sum(
-                )
-            else:
-                long_exposure_calc = 0
-            if not short_exposure_tmp.empty:
-                equity_mkt_beta_group = equity_mkt_beta.loc[
-                    equity_mkt_beta["ID"].isin(
-                        list(short_exposure_tmp["VaRTicker"].unique())
-                    )
-                ]
-                equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
-                short_exposure_tmp["beta_adj_exposure"] = (
-                    equity_mkt_beta_group.values *
-                    short_exposure_tmp["Exposure"]
-                )
-                short_exposure_calc = short_exposure_tmp["beta_adj_exposure"].sum(
-                )
-            else:
-                short_exposure_calc = 0
+
+            long_exposure_calc = calculate_long_exposure(
+                equity_mkt_beta, long_exposure_tmp)
+            short_exposure_calc = calculate_short_exposure(
+                equity_mkt_beta, short_exposure_tmp)
             gross_exposure_calc = long_exposure_calc + abs(short_exposure_calc)
             net_exposure_calc = long_exposure_calc + short_exposure_calc
             exposure_calc_dict[f"{filter_item}_{name}"] = [
-                long_exposure_calc / firm_NAV.values[0],
-                short_exposure_calc / firm_NAV.values[0],
-                gross_exposure_calc / firm_NAV.values[0],
-                net_exposure_calc / firm_NAV.values[0],
+                long_exposure_calc / firm_nav.values[0],
+                short_exposure_calc / firm_nav.values[0],
+                gross_exposure_calc / firm_nav.values[0],
+                net_exposure_calc / firm_nav.values[0],
             ]
     beta_adj_exposure_calc_df = pd.DataFrame(
         exposure_calc_dict,
@@ -278,6 +242,40 @@ def filter_beta_adj_exposure_calc(
     mktcap_df.set_index(["Market Cap Beta Exposure"], inplace=True)
 
     return strat_df, sector_df, industry_df, country_df, mktcap_df
+
+
+def calculate_short_exposure(equity_mkt_beta, short_exposure_tmp) -> float:
+    if short_exposure_tmp.empty:
+        return 0
+
+    unique_tickers = list(short_exposure_tmp["VaRTicker"].unique())
+    equity_mkt_beta_group = equity_mkt_beta.loc[
+        equity_mkt_beta["ID"].isin(unique_tickers)
+    ]
+    equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
+    short_exposure_tmp["beta_adj_exposure"] = (
+        equity_mkt_beta_group.values *
+        short_exposure_tmp["Exposure"]
+    )
+    short_exposure_calc = short_exposure_tmp["beta_adj_exposure"].sum()
+    return short_exposure_calc
+
+
+def calculate_long_exposure(equity_mkt_beta, long_exposure_tmp) -> float:
+    if long_exposure_tmp.empty:
+        return 0
+
+    unique_tickers = list(long_exposure_tmp["VaRTicker"].unique())
+    equity_mkt_beta_group = equity_mkt_beta.loc[
+        equity_mkt_beta["ID"].isin(unique_tickers)
+    ]
+    equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
+    long_exposure_tmp["beta_adj_exposure"] = (
+        equity_mkt_beta_group.values *
+        long_exposure_tmp["Exposure"]
+    )
+    long_exposure_calc = long_exposure_tmp["beta_adj_exposure"].sum()
+    return long_exposure_calc
 
 
 def filter_options_delta_adj_exposure(position: pd.DataFrame) -> pd.DataFrame:
@@ -846,7 +844,7 @@ def stress_test_beta_price_vol_exposure_by_position(
     matrix_cov: pd.DataFrame,
     position_returns: pd.DataFrame,
     factor: pd.DataFrame,
-    firm_NAV: float,
+    firm_nav: float,
 ) -> pd.DataFrame:
     factor = factor.reindex(index=factor_betas.columns[1:])
     factor.reset_index(inplace=True)
@@ -858,126 +856,37 @@ def stress_test_beta_price_vol_exposure_by_position(
 
     position_non_option = position.loc[
         position["SECURITY_TYP"].str.contains(
-            "|".join(
-                [
-                    "fixed",
-                    "future",
-                    "public",
-                    "prefer",
-                    "common",
-                    "reit",
-                    "fund",
-                    "mlp",
-                    "adr",
-                ]
-            ),
+            "|".join(NON_OPTION_TYPES),
             na=False,
             case=False,
         )
     ]
     position_option = position.loc[
         position["SECURITY_TYP"].str.contains(
-            "|".join(["call", "option", "put"]),
+            "|".join(OPTION_TYPES),
             na=False,
             case=False,
         )
     ]
     price_shock_df_list = []
     for price_shock in price_shock_list:
+        combined_price_shock_list = []
         if not position_non_option.empty:
-            position_non_option[f"{100*abs(price_shock):.0f}$ shock value"] = (
-                position_non_option["Quantity"].astype(float)
-                * position_non_option["FXRate"]
-                * position_non_option["MarketPrice"]
-                * position_non_option["PX_POS_MULT_FACTOR"]
-                * (1 + price_shock)
+            position_non_option_brief = parse_non_option_position(
+                firm_nav,
+                position_non_option,
+                price_shock
             )
-            position_non_option[f"{100*abs(price_shock):.0f}% Shock $"] = (
-                position_non_option[f"{100*abs(price_shock):.0f}$ shock value"]
-            ) - (
-                position_non_option["Quantity"].astype(float)
-                * position_non_option["FXRate"]
-                * position_non_option["MarketPrice"]
-                * position_non_option["PX_POS_MULT_FACTOR"]
-            )
-            position_non_option[
-                f"{100*abs(price_shock):.0f}% Shock %"
-            ] = position_non_option[f"{100*abs(price_shock):.0f}% Shock $"].divide(
-                firm_NAV.values[0]
-            )
-            position_non_option_brief = position_non_option[
-                [
-                    "UnderlierName",
-                    "Description",
-                    "VaRTicker",
-                    "RFID",
-                    "Quantity",
-                    "MarketValue",
-                    "Exposure",
-                    f"{100*abs(price_shock):.0f}% Shock $",
-                    f"{100*abs(price_shock):.0f}% Shock %",
-                ]
-            ]
+            combined_price_shock_list.append(position_non_option_brief)
         if not position_option.empty:
-            position_option["shock_underlying_price"] = position_option["UndlPrice"] * (
-                1 + price_shock
+            position_option_brief = parse_option_position(
+                firm_nav,
+                position_option,
+                price_shock
             )
-            position_option["shock_option_price"] = option_price(
-                S=position_option["shock_underlying_price"],
-                X=position_option["Strike"],
-                T=position_option["MtyYears"],
-                Vol=position_option["IVOL_TM"].astype(float),
-                rf=RISK_FREE_RATE,
-                type=position_option["PutCall"],
-            )
-            position_option[f"{100*abs(price_shock):.0f}$ shock value"] = (
-                position_option["shock_option_price"]
-                * position_option["PX_POS_MULT_FACTOR"]
-                * position_option["Quantity"].astype(float)
-                * position_option["FXRate"]
-            )
-            position_option[f"{100*abs(price_shock):.0f}% Shock $"] = (
-                position_option[f"{100*abs(price_shock):.0f}$ shock value"]
-            ) - (
-                position_option["MarketPrice"]
-                * position_option["PX_POS_MULT_FACTOR"]
-                * position_option["Quantity"].astype(float)
-                * position_option["FXRate"]
-            )
-            position_option[f"{100*abs(price_shock):.0f}% Shock %"] = position_option[
-                f"{100*abs(price_shock):.0f}% Shock $"
-            ].divide(firm_NAV.values[0])
-            position_option["Dollar Delta"] = position_option["Exposure"]
-            position_option["Dollar Gamma 1%"] = (
-                position_option["Gamma$"].astype(
-                    float) * position_option["Exposure"]
-            )
-            position_option["Dollar Vega 1%"] = (
-                position_option["Vega"] * position_option["Exposure"]
-            )
-            position_option["Dollar Theta 1D"] = (
-                position_option["Theta"] * position_option["Exposure"]
-            )
-            position_option_brief = position_option[
-                [
-                    "UnderlierName",
-                    "Description",
-                    "VaRTicker",
-                    "RFID",
-                    "Quantity",
-                    "Dollar Delta",
-                    "Dollar Gamma 1%",
-                    "Dollar Vega 1%",
-                    "Dollar Theta 1D",
-                    "MarketValue",
-                    "Exposure",
-                    f"{100*abs(price_shock):.0f}% Shock $",
-                    f"{100*abs(price_shock):.0f}% Shock %",
-                ]
-            ]
+            combined_price_shock_list.append(position_option_brief)
         price_shock_df_list.append(
-            pd.concat([position_non_option_brief,
-                      position_option_brief], axis=0)
+            pd.concat(combined_price_shock_list, axis=0)
         )
     price_shock_df = pd.concat(price_shock_df_list, axis=1)
     price_shock_df = price_shock_df.loc[:,
@@ -1012,7 +921,7 @@ def stress_test_beta_price_vol_exposure_by_position(
         inplace=True,
     )
     price_shock_df["Exposure"] = price_shock_df["Exposure"] / \
-        firm_NAV.values[0]
+        firm_nav.values[0]
     price_shock_df = price_shock_df[
         [
             "Underlier",
@@ -1094,3 +1003,102 @@ def stress_test_beta_price_vol_exposure_by_position(
         ["Exposure"], ascending=False)
 
     return position_breakdown, position_summary
+
+
+def parse_option_position(firm_nav, position_option, price_shock):
+    position_option["shock_underlying_price"] = position_option["UndlPrice"] * (
+        1 + price_shock
+    )
+    position_option["shock_option_price"] = option_price(
+        S=position_option["shock_underlying_price"],
+        X=position_option["Strike"],
+        T=position_option["MtyYears"],
+        Vol=position_option["IVOL_TM"].astype(float),
+        rf=RISK_FREE_RATE,
+        type=position_option["PutCall"],
+    )
+    position_option[f"{100*abs(price_shock):.0f}$ shock value"] = (
+        position_option["shock_option_price"]
+        * position_option["PX_POS_MULT_FACTOR"]
+        * position_option["Quantity"].astype(float)
+        * position_option["FXRate"]
+    )
+    position_option[f"{100*abs(price_shock):.0f}% Shock $"] = (
+        position_option[f"{100*abs(price_shock):.0f}$ shock value"]
+    ) - (
+        position_option["MarketPrice"]
+        * position_option["PX_POS_MULT_FACTOR"]
+        * position_option["Quantity"].astype(float)
+        * position_option["FXRate"]
+    )
+    position_option[f"{100*abs(price_shock):.0f}% Shock %"] = position_option[
+        f"{100*abs(price_shock):.0f}% Shock $"
+    ].divide(firm_nav.values[0])
+    position_option["Dollar Delta"] = position_option["Exposure"]
+    position_option["Dollar Gamma 1%"] = (
+        position_option["Gamma$"].astype(
+            float) * position_option["Exposure"]
+    )
+    position_option["Dollar Vega 1%"] = (
+        position_option["Vega"] * position_option["Exposure"]
+    )
+    position_option["Dollar Theta 1D"] = (
+        position_option["Theta"] * position_option["Exposure"]
+    )
+    position_option_brief = position_option[
+        [
+            "UnderlierName",
+            "Description",
+            "VaRTicker",
+            "RFID",
+            "Quantity",
+            "Dollar Delta",
+            "Dollar Gamma 1%",
+            "Dollar Vega 1%",
+            "Dollar Theta 1D",
+            "MarketValue",
+            "Exposure",
+            f"{100*abs(price_shock):.0f}% Shock $",
+            f"{100*abs(price_shock):.0f}% Shock %",
+        ]
+    ]
+
+    return position_option_brief
+
+
+def parse_non_option_position(firm_nav, position_non_option, price_shock):
+    position_non_option[f"{100*abs(price_shock):.0f}$ shock value"] = (
+        position_non_option["Quantity"].astype(float)
+        * position_non_option["FXRate"]
+        * position_non_option["MarketPrice"]
+        * position_non_option["PX_POS_MULT_FACTOR"]
+        * (1 + price_shock)
+    )
+    position_non_option[f"{100*abs(price_shock):.0f}% Shock $"] = (
+        position_non_option[f"{100*abs(price_shock):.0f}$ shock value"]
+    ) - (
+        position_non_option["Quantity"].astype(float)
+        * position_non_option["FXRate"]
+        * position_non_option["MarketPrice"]
+        * position_non_option["PX_POS_MULT_FACTOR"]
+    )
+    position_non_option[
+        f"{100*abs(price_shock):.0f}% Shock %"
+    ] = position_non_option[f"{100*abs(price_shock):.0f}% Shock $"].divide(
+        firm_nav.values[0]
+    )
+    position_non_option_brief = position_non_option[
+        [
+            "UnderlierName",
+            "Description",
+            "VaRTicker",
+            "RFID",
+            "Quantity",
+            "MarketValue",
+            "Exposure",
+            f"{100*abs(price_shock):.0f}% Shock $",
+            f"{100*abs(price_shock):.0f}% Shock %",
+        ]
+    ]
+
+    return position_non_option_brief

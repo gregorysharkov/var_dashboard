@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from legacy.helper import imply_SMB_GMV
+from legacy.helper import imply_smb_gmv
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def FactorBetas(factor_prices: pd.DataFrame, position_prices: pd.DataFrame):
     factor_returns = (
         factor_prices.iloc[1:,] / factor_prices.iloc[1:,].shift(1)) - 1
     factor_returns.index = factor_prices.index[1:]
-    factor_returns = imply_SMB_GMV(factor_returns)
+    factor_returns = imply_smb_gmv(factor_returns)
     position_returns = (
         position_prices.iloc[1:,] / position_prices.iloc[1:,].shift(1)
     ) - 1
