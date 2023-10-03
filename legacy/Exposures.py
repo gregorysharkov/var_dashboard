@@ -122,25 +122,6 @@ def filter_beta_adj_exposure_calc(
     factor_betas: pd.DataFrame,
     firm_nav: float
 ) -> pd.DataFrame:
-    # agg positions by exposure across fund strats
-    # position_agg_exposure = (
-    #     position.groupby(
-    #         [
-    #             "RFID",
-    #         ]
-    #     )
-    #     .agg(
-    #         {
-    #             "TradeDate": "first",
-    #             "FundName": "first",
-    #             "UnderlierName": "first",
-    #             "VaRTicker": "first",
-    #             "MarketValue": "sum",
-    #             "Exposure": "sum",
-    #         }
-    #     )
-    #     .reset_index()
-    # )
     equity_mkt_beta = factor_betas[["ID", "SPX Index"]]
     filter_list = list(filter.keys())
     exposure_calc_dict = {}

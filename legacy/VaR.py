@@ -1,6 +1,6 @@
 import logging
 from itertools import product
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -16,37 +16,28 @@ LOGGER = logging.getLogger(__name__)
 
 RISK_FREE_RATE = 5.5e-2  # as of Aug 2023
 
+COLUMN_TO_GROUP_MAPPING = {
+    'position': 'VaRTicker',
+    'fund': 'FundName',
+    'sector': 'Sector',
+    'industry': 'Industry',
+    'country': 'Country',
+    'mktcap': 'MarketCap',
+}
 
-def filter_var_grouping(
-    df: pd.DataFrame,
-    position_list: List,
-    fund_list: List,
-    sector_list: List,
-    industry_list: List,
-    country_list: List,
-    mktcap_list: List,
-):
-    if df.columns.str.contains("VaRTicker"):
-        position_list.append(df)
-    elif df.columns.str.contains("FundName"):
-        fund_list.append(df)
-    elif df.columns.str.contains("Sector"):
-        sector_list.append(df)
-    elif df.columns.str.contains("Industry"):
-        industry_list.append(df)
-    elif df.columns.str.contains("Country"):
-        country_list.append(df)
-    elif df.columns.str.contains("MarketCap"):
-        mktcap_list.append(df)
 
-    return (
-        position_list,
-        fund_list,
-        sector_list,
-        industry_list,
-        country_list,
-        mktcap_list,
-    )
+def group_var_report_data_by_type(
+    data_group: List[pd.DataFrame],
+    groupped_data: Dict,
+) -> Dict[str, List[pd.DataFrame]]:
+    '''groups VaR data by position, fund, sector, industry, country, mktcap'''
+
+    for data in data_group:
+        for group_name, keyword in COLUMN_TO_GROUP_MAPPING.items():
+            if data.columns.str.contains(keyword):
+                groupped_data[group_name].append(data)
+
+    return groupped_data
 
 
 def generate_factor_returns(factor_prices: pd.DataFrame) -> pd.DataFrame:
@@ -733,10 +724,6 @@ def filter_Var99_comp(
                 @ exposure[:, None]
             ).sum()
             dict[name] = filter_mvar_99 / firm_NAV
-            # LOGGER.info(
-            #     f"estimating VaR 99 comp of {name} as of date {date} within"
-            #     f"filter {filter_item}"
-            # )
 
         VaR99_comp_df = pd.DataFrame(dict).T
         VaR99_comp_df = pd.DataFrame(
@@ -749,194 +736,84 @@ def filter_Var99_comp(
     return filter_VaR99_comp_df_list
 
 
-def var_structuring(
-    var95_filtered_iso: List,
-    VaR99_filtered_iso: List,
-    var95_filtered_inc: List,
-    VaR99_filtered_inc: List,
-    VaR95_filtered_comp: List,
-    VaR99_filtered_comp: List,
+def generate_var_reports(
+    var_reports: List[List[pd.DataFrame]],
     position: pd.DataFrame,
-) -> pd.DataFrame:
-    # go through all Lists and pull out the FundVaR stats, SectorVaR stats,
-    # IndustryVaR stats,CountryVaR stats, MktCap VaR stats into their respective places
-    position_list = []
-    fund_list = []
-    sector_list = []
-    industry_list = []
-    country_list = []
-    mktcap_list = []
-    for ix in range(0, len(var95_filtered_iso)):
-        df = var95_filtered_iso[ix]
-        (
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        ) = filter_var_grouping(
-            df,
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        )
-    for ix in range(0, len(VaR99_filtered_iso)):
-        df = VaR99_filtered_iso[ix]
-        (
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        ) = filter_var_grouping(
-            df,
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        )
-    for ix in range(0, len(var95_filtered_inc)):
-        df = var95_filtered_inc[ix]
-        (
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        ) = filter_var_grouping(
-            df,
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        )
-    for ix in range(0, len(VaR99_filtered_inc)):
-        df = VaR99_filtered_inc[ix]
-        (
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        ) = filter_var_grouping(
-            df,
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        )
-    for ix in range(0, len(VaR95_filtered_comp)):
-        df = VaR95_filtered_comp[ix]
-        (
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        ) = filter_var_grouping(
-            df,
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        )
-    for ix in range(0, len(VaR99_filtered_comp)):
-        df = VaR99_filtered_comp[ix]
-        (
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        ) = filter_var_grouping(
-            df,
-            position_list,
-            fund_list,
-            sector_list,
-            industry_list,
-            country_list,
-            mktcap_list,
-        )
+) -> Tuple[pd.DataFrame]:
 
-    VaR_position_df = pd.concat(position_list, axis=1)
-    VaR_position_df.reset_index(inplace=True)
-    VaR_position_df.rename(columns={"index": "VaRTicker"}, inplace=True)
-    VaR_position_df = pd.merge(
-        VaR_position_df,
-        position[["VaRTicker", "UnderlierName"]],
-        on=["VaRTicker"],
-        how="inner",
-    )
-    VaR_position_df = VaR_position_df.drop_duplicates(keep="first")
-    cols = [col for col in VaR_position_df.columns if col != "VaRTicker"]
-    VaR_position_df = VaR_position_df[cols]
-    VaR_position_df = VaR_position_df.sort_values(
-        ["VaRTicker_Iso95"], ascending=False)
-    VaR_position_df.columns = VaR_position_df.columns.str.replace(
-        "VaRTicker_", "")
-    VaR_position_top10 = VaR_position_df.iloc[:10]
-    VaR_position_bottom10 = VaR_position_df.iloc[-10:]
-    VaR_position_top10.rename(
+    # go through all Lists and pull out the FundVaR stats, SectorVaR stats,
+    # IndustryVaR stats,CountryVaR stats, MktCap VaR stats into their
+    # respective places
+    groupped_data = {
+        'position': [],  # List[pd.DataFrame],
+        'fund': [],  # List[pd.DataFrame],
+        'sector': [],  # List[pd.DataFrame],
+        'industry': [],  # List[pd.DataFrame],
+        'country': [],  # List[pd.DataFrame],
+        'mktcap': [],  # List[pd.DataFrame],
+    }
+
+    assert len(var_reports) == len(groupped_data.keys())
+    # for each dataframe group defined in var_reports iterate through each group
+    # collect columns that correspond to positions, funds, sectors, industries,
+    # countries, mktcaps inside each dataframe in this group
+    for var_report in var_reports:
+        groupped_data = group_var_report_data_by_type(
+            data_group=var_report,
+            groupped_data=groupped_data
+        )
+    for key, value in groupped_data.items():
+        groupped_data[key] = pd.concat(value, axis=1)
+        groupped_data[key].reset_index(inplace=True)
+        groupped_data[key].rename(
+            columns={"index": f'{key}_name'}, inplace=True)
+
+        # this part is only for position_list
+        # selected_position_data = position[["VaRTicker", "UnderlierName"]]
+        # groupped_data[key] = pd.merge(
+        #     groupped_data[key],
+        #     selected_position_data,
+        #     on='VaRTicker',
+        #     how="inner",
+        # )
+        groupped_data[key] = groupped_data[key].drop_duplicates(keep="first")
+        # sort values by VaR95
+        # groupped_data[key] = groupped_data[key].sort_values(
+        #     ["VaRTicker_Iso95"], ascending=False
+        # )
+        # just keep iso95, iso99, inc95, inc99 etc.
+        # groupped_data[key].columns = groupped_data[key].columns.str.replace(
+        #     f"VaRTicker_", ""
+        # )
+        groupped_data[key].set_index([f'{key}_name'], inplace=True)
+
+    # TODO: this has to go to the formatting section
+    var_top_10 = groupped_data['position'].iloc[:10]  # type: ignore
+    var_top_10.rename(
         columns={"UnderlierName": "Top10 VaR Contributors"}, inplace=True
     )
-    VaR_position_top10.set_index(["Top10 VaR Contributors"], inplace=True)
-    VaR_position_bottom10.rename(
+    # var_top_10.set_index(["Top10 VaR Contributors"], inplace=True)
+
+    var_bottom_10 = groupped_data['position'].iloc[-10:]  # type: ignore
+    var_bottom_10.rename(
         columns={"UnderlierName": "Top10 VaR Diversifiers"}, inplace=True
     )
-    VaR_position_bottom10.set_index(["Top10 VaR Diversifiers"], inplace=True)
-    VaR_fund_df = pd.concat(fund_list, axis=1)
-    VaR_fund_df.reset_index(inplace=True)
-    VaR_fund_df.rename(columns={"index": "Strat VaR"}, inplace=True)
-    VaR_fund_df.set_index(["Strat VaR"], inplace=True)
-    VaR_fund_df.columns = VaR_fund_df.columns.str.replace("FundName_", "")
-    VaR_sector_df = pd.concat(sector_list, axis=1)
-    VaR_sector_df.reset_index(inplace=True)
-    VaR_sector_df.rename(columns={"index": "Sector VaR"}, inplace=True)
-    VaR_sector_df.set_index(["Sector VaR"], inplace=True)
-    VaR_sector_df.columns = VaR_sector_df.columns.str.replace("Sector_", "")
-    VaR_industry_df = pd.concat(industry_list, axis=1)
-    VaR_industry_df.reset_index(inplace=True)
-    VaR_industry_df.rename(columns={"index": "Industry VaR"}, inplace=True)
-    VaR_industry_df.set_index(["Industry VaR"], inplace=True)
-    VaR_industry_df.columns = VaR_industry_df.columns.str.replace(
-        "Industry_", "")
-    VaR_country_df = pd.concat(country_list, axis=1)
-    VaR_country_df.reset_index(inplace=True)
-    VaR_country_df.rename(columns={"index": "Country VaR"}, inplace=True)
-    VaR_country_df.set_index(["Country VaR"], inplace=True)
-    VaR_country_df.columns = VaR_country_df.columns.str.replace("Country_", "")
-    VaR_mktcap_df = pd.concat(mktcap_list, axis=1)
-    VaR_mktcap_df.reset_index(inplace=True)
-    VaR_mktcap_df.rename(columns={"index": "MarketCap VaR"}, inplace=True)
-    VaR_mktcap_df.set_index(["MarketCap VaR"], inplace=True)
-    VaR_mktcap_df.columns = VaR_mktcap_df.columns.str.replace(
-        "MarketCap.1_", "")
+    # var_bottom_10.set_index(["Top10 VaR Diversifiers"], inplace=True)
+
+    var_fund = groupped_data['fund']
+    var_sector = groupped_data['sector']
+    var_industry = groupped_data['industry']
+    var_country = groupped_data['country']
+    var_mktcap = groupped_data['mktcap']
 
     return (
-        VaR_position_top10,
-        VaR_position_bottom10,
-        VaR_fund_df,
-        VaR_sector_df,
-        VaR_industry_df,
-        VaR_country_df,
-        VaR_mktcap_df,
+        var_top_10,
+        var_bottom_10,
+        var_fund,
+        var_sector,
+        var_industry,
+        var_country,
+        var_mktcap,
     )
 
 
