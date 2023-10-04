@@ -24,7 +24,7 @@ def insert_text(worksheet, table, text) -> None:
 def merge_above(worksheet, table: ReportTable, style, text) -> None:
     '''inserts a text above the given element'''
 
-    (start_col, start_row), (end_col, end_row) = table.range  # type: ignore
+    (start_col, start_row), (end_col, _) = table.range  # type: ignore
 
     start_row -= 1
 
@@ -35,7 +35,7 @@ def merge_above(worksheet, table: ReportTable, style, text) -> None:
 def merge_to_left(worksheet, table: ReportTable, style, text) -> None:
     '''inserts merged range to the left'''
     # pylint: disable=W0621
-    (start_col, start_row), (end_col, end_row) = table.range  # type: ignore
+    (start_col, start_row), (_, end_row) = table.range  # type: ignore
 
     worksheet.merge_range(start_row, start_col-1,
                           end_row, start_col-1,
@@ -127,12 +127,13 @@ def _set_static_column_types(report_table):
 
     data = report_table.data
     data_types = [str(x) for x in list(data.dtypes)]
-    for column, column_type in zip(data.columns, data_types):
+    for idx, (column, column_type) in enumerate(zip(data.columns, data_types)):
         column_format = report_table.date_format \
             if 'date' in column_type else report_table.values_format
         return_list.append({
             'header': column,
             'format': column_format,
+            'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list
@@ -142,13 +143,14 @@ def _set_manual_column_types(report_table):
     '''sets each column a type specified in a list of values format'''
 
     return_list = []
-    for column, value_format in zip(
+    for idx, (column, value_format) in enumerate(zip(
         report_table.data.columns,
         report_table.values_format
-    ):
+    )):
         return_list.append({
             'header': column,
             'format': value_format,
+            'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list

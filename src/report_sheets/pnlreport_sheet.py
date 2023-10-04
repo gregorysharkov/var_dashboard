@@ -50,7 +50,7 @@ def generate_pnlreport_sheet(
 
     return_analysis_stats = ReportTable(
         data=data_dict.get('return_analysis_stats'),  # type: ignore
-        values_format=styles.get('percentage'),
+        values_format=styles.get('float'),
         table_name='return_analysis_stats',
         initial_position=(1, 27),
     )
