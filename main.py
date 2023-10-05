@@ -9,13 +9,21 @@ import pandas_market_calendars as mcal
 import xlsxwriter
 
 import legacy.Exposures as Exposures
-import legacy.Factors as Factors
+import legacy.Factors as fac
 import legacy.pnl_stats as pnl_stats
 import legacy.VaR as var
+import legacy.var_utils as var_utils
 import src.report_sheets as rsh
+from legacy.helper import calculate_returns, imply_smb_gmv
 
-logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger(__name__)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+
+logger = logging.getLogger(__name__)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+logging.getLogger().handlers.clear()
 
 now = datetime.utcnow().strftime("%Y%m%d")
 
@@ -29,18 +37,15 @@ def get_market_trading_days(start_date: str, end_date: str) -> pd.DataFrame:
     return market_trading_days_range
 
 
-def read_xlsx(
-    xlsx_path: str,
-    sheet_name: str,
-    cols: List[str]
-) -> pd.DataFrame:
+def read_xlsx(xlsx_path: str, sheet_name: str, cols: List[str]) -> pd.DataFrame:
     '''read xlsx file and return specified columns of a specified sheet'''
 
     df = pd.read_excel(xlsx_path, sheet_name=sheet_name, header=0)
     return df[cols]
 
 
-if __name__ == "__main__":
+def parse_arguments():
+    """Parse command line arguments."""
     parser = ArgumentParser(description="")
     parser.add_argument(
         "--price_vol_shock_range",
@@ -57,15 +62,29 @@ if __name__ == "__main__":
         help="holdings date of postions across investment advisor",
     )
     args = parser.parse_args()
+    return args
 
-    # open the price_shock_range command line argument
+
+def parse_price_vol_shock_range(args):
+    '''parses a price volatility from args'''
+
     price_vol_shock_range = args.price_vol_shock_range
     price_vol_shock_range = price_vol_shock_range.replace("'", '"')
     """Note: read-in quasi_opt_AM_sort_list via json"""
     price_vol_shock_range = json.loads(price_vol_shock_range)
+    return price_vol_shock_range
 
-    # open the holdings_date command line argument
-    holdings_date = args.holdings_date
+
+def parse_holdings_date(args):
+    '''Parse holdings date from command line arguments.'''
+    holdings_date = datetime.strptime(args.holdings_date, '%Y-%m-%d').date()
+    return holdings_date
+
+
+if __name__ == "__main__":
+    args = parse_arguments()
+    price_vol_shock_range = parse_price_vol_shock_range(args)
+    holdings_date = parse_holdings_date(args)
 
     # 1. Read in factors, prices, positions, AUM
     factor = pd.read_csv("data/factors.csv")
@@ -83,7 +102,7 @@ if __name__ == "__main__":
         'FXRate', 'Description'
     ]
     raw_positions = read_xlsx(
-        'data/Master_VaRFactor_Engine_2.xlsm',
+        'data/Master_varFactor_Engine_2.xlsm',
         'RawPositions',
         RAW_POSITION_COLS,
     )
@@ -94,9 +113,9 @@ if __name__ == "__main__":
     position["MarketValue"] = position["MarketValue"].astype(float)
     for col in RAW_POSITION_COLS:
         position[col] = raw_positions[col]
-    # TODO: Sometimes Exposure, sometimes VaRExposure, converge to the first
+    # TODO: Sometimes Exposure, sometimes varExposure, converge to the first
     # TODO: Sometimes MarketCap.1, sometimes MarketCap, converge to the first
-    # TODO: VarTicker -> VaRTicker
+    # TODO: VarTicker -> VarTicker
     # TODO: UnderlierSymbol -> UnderlierName
     position.rename(
         {
@@ -109,11 +128,11 @@ if __name__ == "__main__":
         axis=1,
         inplace=True
     )
-    AUM = pd.read_excel("data/Historical Pnl and Nav.xlsx")
+    aum = pd.read_excel("data/Historical Pnl and Nav.xlsx")
     # AUM = pd.read_csv("data/Historical Pnl and Nav.csv",
     #                   sep=';', decimal='.',)
-    AUM_clean = pnl_stats.NAV_clean(AUM)  # model NAVs
-    firm_nav = AUM_clean.loc[AUM_clean.index == holdings_date]["EndBookNAV"]
+    aum_clean = pnl_stats.clean_nav(aum)  # model NAVs
+    firm_nav = aum_clean.loc[aum_clean.index == holdings_date]["EndBookNAV"]
 
     price_date_index = pd.to_datetime(price.index)
     price_date_min = price_date_index.min()
@@ -121,12 +140,11 @@ if __name__ == "__main__":
     date_list = pd.date_range(price_date_min, price_date_max, freq="D")
     market_trading_days_range = get_market_trading_days(
         price_date_min, price_date_max)
-    market_trading_days_range = market_trading_days_range.index\
-        .strftime("%Y-%m-%d")
+    market_trading_days_range = market_trading_days_range.index.strftime(
+        "%Y-%m-%d")
 
-    # for now need to process positions and
-    # force a distinct RFID for each distinct symbol
-    LOGGER.info(
+    # for now need to process positions and force a distinct RFID for each distinct symbol
+    logger.info(
         "process positions and force a distinct RFID for each distinct symbol")
     cols = position.columns[~position.columns.isin(["RFID"])]
     position = position[cols]
@@ -141,11 +159,11 @@ if __name__ == "__main__":
     position["Exposure"] = position["Exposure"].astype(float)
 
     # structure positions, factor, price data for subsequent estimation of Factor
-    # betas, VaRs, Exposures, and Stress Tests
+    # betas, vars, Exposures, and Stress Tests
     price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
-    price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
-    position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
+    # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
+    # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
     factor_names = list(factor["Factor Names"])
     factor_names = [name for name in factor_names if str(name) != "nan"]
     factor_ids_full = list(factor["FactorID"])
@@ -159,26 +177,33 @@ if __name__ == "__main__":
     factor = factor.loc[factor["FactorID"].isin(factor_ids)]
     position_ids = list(position["VaRTicker"].unique())
     position_prices = price[position_ids]
-    strat_filters = position["FundName"].unique()
-    sector_filters = position["Sector"].unique()
-    industry_filters = position["Industry"].unique()
-    country_filters = position["Country"].unique()
-    mcap_filters = position["MarketCap.1"].unique()
-    filters_dict = {
-        "FundName": strat_filters,
-        "Sector": sector_filters,
-        "Industry": industry_filters,
-        "Country": country_filters,
-        "MarketCap.1": mcap_filters,
-    }
+    # strat_filters = position["FundName"].unique()
+    # sector_filters = position["Sector"].unique()
+    # industry_filters = position["Industry"].unique()
+    # country_filters = position["Country"].unique()
+    # mcap_filters = position["MarketCap.1"].unique()
+    # filters_dict = {
+    #     "FundName": strat_filters,
+    #     "Sector": sector_filters,
+    #     "Industry": industry_filters,
+    #     "Country": country_filters,
+    #     "MarketCap.1": mcap_filters,
+    # }
 
-    LOGGER.info("review input data")
+    logger.info("review input data")
 
     # 1.a. estimate factor betas, factor vols
-    factor_betas = Factors.FactorBetas(factor_prices, position_prices)
-    position_returns = Factors.position_returns(position_prices)
+    factor_returns = calculate_returns(factor_prices)
+    factor_returns = imply_smb_gmv(factor_returns)
+    logger.info('Done with factor returns estimation')
+    position_returns = calculate_returns(position_prices)
+    logger.info('Done with position returns estimation')
 
-    # 1.b. VaR functions
+    factor_betas = fac.calculate_position_betas(
+        factor_returns, position_returns)
+    logger.info('Done with factor betas estimation')
+
+    # 1.b. var functions
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     # pd.ExcelWriter
     writer_options = {'constant_memory': False, 'nan_inf_to_errors': True}
@@ -186,53 +211,58 @@ if __name__ == "__main__":
     writer = xlsxwriter.Workbook(file_name, writer_options)
     writer.set_tab_ratio(75)
     # Excel equivalent ["FactorCorrels"]
-    matrix_correlation = var.matrix_correlation(factor_prices, factor)
-    matrix_cov = var.matrix_cov(factor_prices)
-    decay_cov = var.decay_cov(factor_prices)
-    var95_top_10, var95_bottom_10 = var.filter_var95(
-        factor_prices, position, factor_betas, matrix_cov, firm_nav
+    matrix_correlation = var_utils.correlation_matrix(factor_prices, factor)
+    matrix_cov = var_utils.covariance_matrix(factor_returns)
+    decay_cov = var_utils.decay_covariance_matrix(factor_returns)
+
+    var_exposures = var.filter_var(
+        position=position,
+        factor_betas=factor_betas,
+        matrix_cov=matrix_cov,
+        firm_nav=firm_nav[holdings_date],
+        quantiles=['95', '99'],
+        filter_item='VaRTicker',
     )
-    var99_top_10, var99_bottom_10 = var.filter_var99(
-        factor_prices, position, factor_betas, matrix_cov, firm_nav
+    var_top10 = var_exposures.sort_values('position_VaR95').iloc[:10]
+    var_bottom10 = var_exposures.sort_values('position_VaR95').iloc[-10:]
+
+    filter_items = {
+        'position': 'VaRTicker',
+        'fund': 'FundName',
+        'sector': 'Sector',
+        'industry': 'Industry',
+        'country': 'Country',
+        'mktcap': 'MarketCap.1',
+    }
+    iso_vars = var.filter_var_ticker_group(
+        position=position,
+        factor_betas=factor_betas,
+        matrix_cov=matrix_cov,
+        firm_nav=firm_nav[holdings_date],
+        quantiles=['95', '99'],
+        filter_items=filter_items,
     )
-    var95_filtered_iso = var.filter_var95_iso(
+    # var95_filtered_iso = var.filter_var95_iso(
+    #     filters_dict, factor_prices, position,
+    #     factor_betas, matrix_cov, firm_nav
+    # )
+    # var99_filtered_iso = var.filter_var99_iso(
+    #     filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
+    # )
+    var95_filtered_inc = var.filter_var95_inc(
         filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
-    var_top10 = pd.merge(var95_top_10, var99_top_10,
-                         left_index=True, right_index=True)
-    var_bottom10 = pd.merge(
-        var95_bottom_10, var99_bottom_10, left_index=True, right_index=True
-    )
-    var99_filtered_iso = var.filter_var99_iso(
-        filters_dict, factor_prices, position,
-        factor_betas, matrix_cov, firm_nav
-    )
-    var95_filtered_inc = var.filter_var95_inc(
-        filters_dict, factor_prices, position,
-        factor_betas, matrix_cov, firm_nav
-    )
     var99_filtered_inc = var.filter_var99_inc(
-        filters_dict, factor_prices, position,
-        factor_betas, matrix_cov, firm_nav
+        filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
     var95_filtered_comp = var.filter_var95_comp(
-        filters_dict, factor_prices, position,
-        factor_betas, matrix_cov, firm_nav
+        filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
     var99_filtered_comp = var.filter_var99_comp(
-        filters_dict, factor_prices, position,
-        factor_betas, matrix_cov, firm_nav
+        filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
-    var_reports = [
-        var95_filtered_iso,
-        var99_filtered_iso,
-        var95_filtered_inc,
-        var99_filtered_inc,
-        var95_filtered_comp,
-        var99_filtered_comp,
-    ]
-    # Excel equivalent ["VaRReport; "Strat VaR", "Sector VaR", "Industry VaR",
-    # "Country VaR", "Market Cap VaR" tbls]
+    # Excel equivalent ["varReport; "Strat var", "Sector var", "Industry var",
+    # "Country var", "Market Cap var" tbls]
     (
         var_structured_position_top10,
         var_structured_position_bottom10,
@@ -241,33 +271,38 @@ if __name__ == "__main__":
         var_structured_industry,
         var_structured_country,
         var_structured_mcap,
-    ) = var.generate_var_reports(
-        var_reports,
-        # position,
+    ) = var.var_structuring(
+        var95_filtered_iso,
+        var99_filtered_iso,
+        var95_filtered_inc,
+        var99_filtered_inc,
+        var95_filtered_comp,
+        var99_filtered_comp,
+        position,
     )
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    # stress_test_beta_price_vol_calc = var.filter_stress_test_beta_price_vol(
-    #     filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
-    # )
-    # stress_test_beta_price_vol_results_df = var.stress_test_structuring(
-    #     stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    # )
-    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    # (
-    #     stress_test_price_vol_calc,
-    #     stress_test_price_vol_exposure_calc,
-    # ) = var.filter_stress_test_price_vol(
-    #     filters_dict, factor_prices, position, price_vol_shock_range
-    # )
-    # # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    # stress_test_price_vol_results_df = var.stress_test_structuring(
-    #     stress_test_price_vol_calc, position, price_vol_shock_range
-    # )
-    # stress_test_price_vol_exposure_results_df = var.stress_test_structuring(
-    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    # )
+    stress_test_beta_price_vol_calc = var.filter_stress_test_beta_price_vol(
+        filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
+    )
+    stress_test_beta_price_vol_results_df = var.stress_test_structuring(
+        stress_test_beta_price_vol_calc, position, price_vol_shock_range
+    )
+    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
+    (
+        stress_test_price_vol_calc,
+        stress_test_price_vol_exposure_calc,
+    ) = var.filter_stress_test_price_vol(
+        filters_dict, factor_prices, position, price_vol_shock_range
+    )
+    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
+    stress_test_price_vol_results_df = var.stress_test_structuring(
+        stress_test_price_vol_calc, position, price_vol_shock_range
+    )
+    stress_test_price_vol_exposure_results_df = var.stress_test_structuring(
+        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -331,13 +366,13 @@ if __name__ == "__main__":
         columns=["SPX Index"],
         index=factor_prices.index,
     )
-    AUM_clean = pd.merge(
-        AUM_clean, factor_rets["SPX Index"], left_index=True, right_index=True
+    aum_clean = pd.merge(
+        aum_clean, factor_rets["SPX Index"], left_index=True, right_index=True
     )
     # Excel equivalents ["PNLReport"]
-    return_analysis_stats = pnl_stats.return_analysis(AUM_clean)
+    return_analysis_stats = pnl_stats.return_analysis(aum_clean)
     comparative_analysis_stats = pnl_stats.comparative_statistics(
-        AUM_clean, return_analysis_stats
+        aum_clean, return_analysis_stats
     )
 
     # 1.f. dashboard
@@ -354,7 +389,7 @@ if __name__ == "__main__":
                 "TradeDate": "first",
                 "FundName": "first",
                 "UnderlierName": "first",
-                "VaRTicker": "first",
+                "VarTicker": "first",
                 "MarketValue": "sum",
                 "Exposure": "sum",
             }
@@ -439,132 +474,119 @@ if __name__ == "__main__":
         }
     )
 
-    dashboard_data = {
-        'var_structured_position_top10': var_structured_position_top10.fillna(0),
-        'var_structured_position_bottom10': var_structured_position_bottom10.fillna(0),
-        'sector_exposure_df': sector_exposure_df,
-        'options_premium_calc': options_premium_calc,
-        'greek_sensitivities_calc': greek_sensitivities_calc.sort_index(),
-        'macro_factor_decomp_df': macro_factor_decomp_df.sort_index(),
-        'sector_factor_decomp_df': sector_factor_decomp_df,
-        'fund_exp_pct_dashboard': fund_exp_pct_dashboard,
-        'fund_exp_usd_dashboard': fund_exp_usd_dashboard,
-    }
-
     rsh.generate_dashboard_sheet(
         writer,
-        data=dashboard_data
+        data={
+            'var_structured_position_top10': var_structured_position_top10.fillna(0),
+            'var_structured_position_bottom10': var_structured_position_bottom10.fillna(0),
+            'sector_exposure_df': sector_exposure_df,
+            'options_premium_calc': options_premium_calc,
+            'greek_sensitivities_calc': greek_sensitivities_calc.sort_index(),
+            'macro_factor_decomp_df': macro_factor_decomp_df.sort_index(),
+            'sector_factor_decomp_df': sector_factor_decomp_df,
+            'fund_exp_pct_dashboard': fund_exp_pct_dashboard,
+            'fund_exp_usd_dashboard': fund_exp_usd_dashboard,
+        }
     )
+
+    # var_structured_position_top10.to_csv(
+    #     r'output\var_top10.csv', sep=';', index=False)
 
     # 1.g., build rest of workbook beyond dashboard
-    pnldata_report_data = {
-        'aum_clean': AUM_clean,
-    }
-
     rsh.generate_pnldata_sheet(
         writer,
-        data_dict=pnldata_report_data
+        data_dict={
+            'aum_clean': aum_clean,
+        }
     )
-
-    pnl_report_data = {
-        'comparative_analysis_stats': comparative_analysis_stats,
-        'return_analysis_stats': return_analysis_stats,
-    }
 
     rsh.generate_pnlreport_sheet(
         writer,
-        data_dict=pnl_report_data
+        data_dict={
+            'comparative_analysis_stats': comparative_analysis_stats,
+            'return_analysis_stats': return_analysis_stats,
+        }
     )
-
-    factor_heatmap_data = {
-        'factor_heatmap': factor_heat_map.
-        sort_values('Exposure', ascending=False),
-    }
-
     rsh.generate_factor_heatmap_sheet(
         writer,
-        data_dict=factor_heatmap_data
+        data_dict={
+            'factor_heatmap': factor_heat_map.
+            sort_values('Exposure', ascending=False),
+        }
     )
-
-    factor_exposure_report_data = {
-        'macro_factor_decomp_df': macro_factor_decomp_df,
-        'sector_factor_decomp_df': sector_factor_decomp_df,
-        'risk_factor_exposure_top_n_list': risk_factor_exposure_top_N_list,
-        'risk_factor_exposure_bottom_n_list': risk_factor_exposure_bottom_N_list,
-    }
-
     rsh.generate_factor_exposures_sheet(
         writer,
-        data=factor_exposure_report_data
+        data={
+            'macro_factor_decomp_df': macro_factor_decomp_df,
+            'sector_factor_decomp_df': sector_factor_decomp_df,
+            'risk_factor_exposure_top_n_list': risk_factor_exposure_top_N_list,
+            'risk_factor_exposure_bottom_n_list': risk_factor_exposure_bottom_N_list,
+        }
     )
-
-    exp_report_data = [
-        {
-            'Strategy exposure': strat_exposure_df,
-            'Strategy Beta Exposure': strat_beta_adj_exposure_df,
-        },
-        {
-            'Sector Exposure': sector_exposure_df.set_index('Sector Exposure'),
-            'Sector Beta Exposure': sector_beta_adj_exposure_df,
-        },
-        {
-            'Industry Exposure': industry_exposure_df,
-            'Industry Beta Exposure': industry_beta_adj_exposure_df,
-        },
-        {
-            'Country Exposure': country_exposure_df,
-            'Country Beta Exposure': country_beta_adj_exposure_df,
-        },
-        {
-            'Market Cap Exposure': mktcap_exposure_df,
-            'Market Cap Beta Exposure': mktcap_beta_adj_exposure_df,
-        },
-    ]
 
     rsh.generate_exp_report_sheet(
         writer,
-        data=exp_report_data
+        data=[
+            {
+                'Strategy exposure': strat_exposure_df,
+                'Strategy Beta Exposure': strat_beta_adj_exposure_df,
+            },
+            {
+                'Sector Exposure': sector_exposure_df.set_index('Sector Exposure'),
+                'Sector Beta Exposure': sector_beta_adj_exposure_df,
+            },
+            {
+                'Industry Exposure': industry_exposure_df,
+                'Industry Beta Exposure': industry_beta_adj_exposure_df,
+            },
+            {
+                'Country Exposure': country_exposure_df,
+                'Country Beta Exposure': country_beta_adj_exposure_df,
+            },
+            {
+                'Market Cap Exposure': mktcap_exposure_df,
+                'Market Cap Beta Exposure': mktcap_beta_adj_exposure_df,
+            },
+        ]
     )
     # mktcap_exposure_df.to_csv(r'data/mktcap_exposure_df.csv', sep=';')
-    var_report_data = [
-        {
-            'var_top10': var_top10,
-            'var_bottom10': var_bottom10,
-        },
-        {
-            'Strat VaR': var_structured_strat.fillna(0),
-            'Sector VaR': var_structured_sector.fillna(0),
-            'Industry VaR': var_structured_industry.fillna(0),
-            'Country VaR': var_structured_country.fillna(0),
-            'MarketCap VaR': var_structured_mcap.fillna(0),
-        },
-    ]
-
     rsh.generate_var_report_sheet(
         writer,
-        data=var_report_data
+        data=[
+            {
+                'var_top10': var_top10,
+                'var_bottom10': var_bottom10,
+            },
+            {
+                'Strat var': var_structured_strat.fillna(0),
+                'Sector var': var_structured_sector.fillna(0),
+                'Industry var': var_structured_industry.fillna(0),
+                'Country var': var_structured_country.fillna(0),
+                'MarketCap var': var_structured_mcap.fillna(0),
+            },
+        ]
     )
 
-    # stress_test_report_data = [
-    #     {
-    #         'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-    #         'options_delta1_exposure_calc': options_delta1_exposure_calc,
-    #         # .set_index('Greek Sensitivity'),
-    #         'greek_sensitivities_calc': greek_sensitivities_calc,
-    #         'options_premium_calc': options_premium_calc.set_index('Premium'),
-    #     },
-    #     {
-    #         'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-    #         'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-    #         'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
-    #     },
-    #     stress_test_price_vol_exposure_results_df,
-    # ]
-
-    # rsh.generate_options_stress_sheet(
-    #     writer,
-    #     data=stress_test_report_data
-    # )
+    rsh.generate_options_stress_sheet(
+        writer,
+        data=[
+            {
+                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+                'options_delta1_exposure_calc': options_delta1_exposure_calc,
+                # .set_index('Greek Sensitivity'),
+                'greek_sensitivities_calc': greek_sensitivities_calc,
+                'options_premium_calc': options_premium_calc.set_index('Premium'),
+            },
+            {
+                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+            },
+            stress_test_price_vol_exposure_results_df,
+        ]
+    )
+    drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
+                    'Dollar Vega 1%', 'Dollar Theta 1D']
 
     rsh.generate_positions_summary_sheet(
         writer,
@@ -582,4 +604,4 @@ if __name__ == "__main__":
     )
 
     writer.close()
-    LOGGER.info("assess & interpret")
+    logger.info("assess & interpret")

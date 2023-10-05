@@ -1,4 +1,5 @@
 import logging
+from functools import reduce
 from itertools import product
 from typing import Dict, List, Tuple
 
@@ -6,7 +7,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from legacy.helper import imply_smb_gmv, option_price
+import legacy.var_utils as var_utils
+from legacy.helper import option_price
 
 pd.set_option("mode.chained_assignment", None)
 
@@ -37,8 +39,8 @@ AGGREGATIONS = {
 GROUP_AGGREGATIONS = {"VaRTicker": "first", "Exposure": "sum"}
 
 QUANTILES = {
-    95: 1.644854,
-    99: 2.326348,
+    '95': 1.644854,
+    '99': 2.326348,
 }
 
 
@@ -56,202 +58,122 @@ def group_var_report_data_by_type(
     return groupped_data
 
 
-def generate_factor_returns(factor_prices: pd.DataFrame) -> pd.DataFrame:
-    '''generates factor returns from factor prices'''
+# def generate_factor_returns(factor_prices: pd.DataFrame) -> pd.DataFrame:
+#     '''
+#     generates factor returns from factor prices
+#     it is a logarithm of ratio between todays and tomorrow's prices
+#     when we do a shift, the first line is NaN, so we need to remove it
+#     '''
 
-    return np.log(
-        factor_prices.iloc[1:, :] / factor_prices.iloc[1:, :].shift(1)
-    )  # type: ignore
+#     factor_returns = np.log(
+#         factor_prices / factor_prices.shift(1))  # type: ignore
+#     return factor_returns.iloc[1:, :]  # type: ignore
 
-
-def matrix_correlation(
-    factor_prices: pd.DataFrame,
-    factor: pd.DataFrame,
-) -> pd.DataFrame:
-    '''calculates factor correlation matrix'''
-    factor_returns = generate_factor_returns(factor_prices)
-    factor_returns = imply_smb_gmv(factor_returns)  # type: ignore
-    factor_correl = factor_returns.corr()
-    factor.set_index(["FactorID"], inplace=True)
-    factor_correl = pd.merge(
-        factor_correl, factor["Factor Names"],
-        left_index=True,
-        right_index=True,
-    )
-    factor_correl.reset_index(inplace=True, drop=True)
-    factor_correl.set_index(["Factor Names"], inplace=True)
-    factor_correl.columns = factor_correl.index
-
-    return factor_correl
-
-
-def decay_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
-    factor_returns = generate_factor_returns(factor_prices)
-    factor_returns = imply_smb_gmv(factor_returns)
-    intervals = np.linspace(start=1, stop=len(
-        factor_returns), num=len(factor_returns))
-    data = ((1 - 0.94) * 0.94 ** (intervals - 1)) ** (0.5)
-    df_tmp = np.repeat(data, len(factor_returns.columns))
-    df_tmp = df_tmp.reshape(len(data), len(factor_returns.columns))
-    factor_returns_decay = factor_returns * df_tmp
-    factor_covar_decay = factor_returns_decay.cov()
-
-    return factor_covar_decay
-
-
-def matrix_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
-    factor_returns = generate_factor_returns(factor_prices)
-    factor_returns = imply_smb_gmv(factor_returns)  # type: ignore
-    factor_cov = factor_returns.cov()
-
-    return factor_cov
-
-
-def filter_var95(
-    factor_prices: pd.DataFrame,
+def filter_var_ticker_group(
     position: pd.DataFrame,
     factor_betas: pd.DataFrame,
     matrix_cov: pd.DataFrame,
     firm_nav: float,
-) -> pd.DataFrame:
-    # agg positions by exposure across fund strats
-    position_agg_exposure = (
-        position.groupby('RFID')
-        .agg(AGGREGATIONS)
-        .reset_index()
-    )
-    dict = {}
-    quantile = 1.644854
-    filter_item = "VaRTicker"
-    position_grouped = position.groupby([filter_item])
-    # iterate over each ticker to calculate the matrix_cov
-    for name, group in tqdm(position_grouped, 'filter_VaR95'):
-        if isinstance(name, tuple):
-            name = name[0]
-        name_aggregates = aggregate_by_rfid(group)
-        exposure, factor_betas_fund = calculate_betas_and_exposure(
+    quantiles: List[str],
+    filter_items: Dict[str, str],
+) -> Dict[str, pd.DataFrame]:
+    '''
+    wraper for filter_var
+    calculates var for a given group and returns
+    a list of dataframes containing var for each group
+    and each quantiles
+
+    Args:
+        position: pd.DataFrame. Contains positions
+        factor_betas: pd.DataFrame, contains factor betas
+        matrix_cov: pd.DataFrame, contains covariance matrix
+        firm_nav: float, Net Asset Value for a given firm
+        quantiles: List[str], list of quantiles to be calculated
+        filter_items: Dict[str, str], a dictionary that maps a group
+            to a name of the column in the positions dataframe
+
+    Returns:
+        dictionary of dataframes:
+            key: string name of the grouping
+            value: dataframe with calculated vars
+    '''
+
+    return_dict = {}
+    for group_name, column_name in filter_items.items():
+        group_var = filter_var(
+            position=position,
             factor_betas=factor_betas,
-            tmp=name_aggregates
+            matrix_cov=matrix_cov,
+            firm_nav=firm_nav,
+            quantiles=quantiles,
+            filter_item=column_name,
         )
-        var_matrix = multiply_matrices(matrix_cov, exposure, factor_betas_fund)
-        adjusted_var_matrix = (var_matrix * quantile) / firm_nav
-        dict[name] = adjusted_var_matrix
+        return_dict[group_name] = group_var
 
-    return_data = pd.DataFrame(dict).T
-    print(return_data.head())
-    VaR95_df = pd.DataFrame(
-        return_data,
-        columns=[f"{filter_item}_VaR95"],
-        index=position_agg_exposure["UnderlierName"],
-    )
-    VaR95_df.to_csv('output/var95.csv', sep=';')
-
-    return VaR95_df
-
-    # VaR95_top10 = VaR95_df.sort_values([f"{filter_item}_VaR95"], ascending=False).iloc[
-    #     :10
-    # ]
-    # VaR95_top10.reset_index(inplace=True)
-    # VaR95_top10.rename(
-    #     columns={
-    #         "UnderlierName": "Top10 VaR Contributors",
-    #         f"{filter_item}_VaR95": "VaR95",
-    #     },
-    #     inplace=True,
-    # )
-    # VaR95_top10.set_index(["Top10 VaR Contributors"], inplace=True)
-    # VaR95_bottom10 = VaR95_df.sort_values(
-    #     [f"{filter_item}_VaR95"], ascending=True
-    # ).iloc[:10]
-    # VaR95_bottom10.reset_index(inplace=True)
-    # VaR95_bottom10.rename(
-    #     columns={
-    #         "UnderlierName": "Top10 VaR Diversifiers",
-    #         f"{filter_item}_VaR95": "VaR95",
-    #     },
-    #     inplace=True,
-    # )
-    # VaR95_bottom10.set_index(["Top10 VaR Diversifiers"], inplace=True)
-
-    # return VaR95_top10, VaR95_bottom10
+    return return_dict
 
 
-def calculate_betas_and_exposure(factor_betas, tmp):
-    exposure = tmp["Exposure"].values
-    fund_positions = tmp["VaRTicker"]
-    factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(
-        fund_positions)]
-
-    return exposure, factor_betas_fund
-
-
-def filter_var99(
-    factor_prices: pd.DataFrame,
+def filter_var(
     position: pd.DataFrame,
     factor_betas: pd.DataFrame,
     matrix_cov: pd.DataFrame,
-    firm_NAV: float,
+    firm_nav: float,
+    quantiles: List[str],
+    filter_item: str = "VaRTicker",
 ) -> pd.DataFrame:
-    # agg positions by exposure across fund strats
-    position_agg_exposure = (
-        position.groupby('RFID')
-        .agg(AGGREGATIONS)
-        .reset_index()
-    )
-    dict = {}
-    filter_item = "VaRTicker"
-    position_grouped = position.groupby([filter_item])
-    for name, group in tqdm(position_grouped, 'filter_VaR99'):
-        if isinstance(name, tuple):
-            name = name[0]
-        tmp = aggregate_by_rfid(group)
-        exposure = tmp["Exposure"].values
-        fund_positions = tmp["VaRTicker"]
-        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(
-            fund_positions)]
-        VaR99 = multiply_matrices(matrix_cov, exposure, factor_betas_fund)
-        dict[name] = (VaR99[:, 0] * 2.326348) / firm_NAV
+    '''calculates var exposure per position given a list of quantities'''
 
-    VaR99_df = pd.DataFrame(dict).T
-    VaR99_df = pd.DataFrame(
-        VaR99_df.values,
-        columns=[f"{filter_item}_VaR99"],
-        index=position_agg_exposure["UnderlierName"],
+    alfa_quantiles = [QUANTILES.get(quantile) for quantile in quantiles]
+
+    exposure_aggregates = position\
+        .groupby([filter_item])\
+        .agg({"Exposure": "sum"})
+
+    if filter_item != 'VaRTicker':
+        print('something')
+
+    position_exposure = var_utils.multiply_matrices(
+        matrix_cov=matrix_cov,
+        exposure=exposure_aggregates,
+        factor_betas=factor_betas,
     )
-    VaR99_top10 = VaR99_df.sort_values([f"{filter_item}_VaR99"], ascending=False).iloc[
-        :10
-    ]
-    VaR99_top10.reset_index(inplace=True)
-    VaR99_top10.rename(
+
+    var_exposures = []
+    for alfa, quantile, in zip(alfa_quantiles, quantiles):
+        var_exposure = calculate_exposure(
+            firm_nav=firm_nav,
+            filter_item=filter_item,
+            position_exposure=position_exposure,
+            alfa=alfa,  # type: ignore
+            quantile=quantile
+        )
+        var_exposures.append(var_exposure)
+
+    combined_exposures = reduce(lambda x, y: x.join(y), var_exposures)
+    return combined_exposures
+
+
+def calculate_exposure(
+    firm_nav: float,
+    filter_item: str,
+    position_exposure: pd.DataFrame,
+    alfa: float,
+    quantile: str,
+) -> pd.DataFrame:
+    '''calculates var exposure for given filter item and the given quantile'''
+
+    var_exposure = position_exposure * alfa / firm_nav
+    var_exposure.reset_index(inplace=True)
+    var_exposure.rename(
         columns={
-            "UnderlierName": "Top10 VaR Contributors",
-            f"{filter_item}_VaR99": "VaR99",
+            'Exposure': f'position_VaR{quantile}',
+            'position': 'UnderlierName'
+            if filter_item == 'VaRTicker' else filter_item,
         },
-        inplace=True,
+        inplace=True
     )
-    VaR99_top10.set_index(["Top10 VaR Contributors"], inplace=True)
-    VaR99_bottom10 = VaR99_df.sort_values(
-        [f"{filter_item}_VaR99"], ascending=True
-    ).iloc[:10]
-    VaR99_bottom10.reset_index(inplace=True)
-    VaR99_bottom10.rename(
-        columns={
-            "UnderlierName": "Top10 VaR Diversifiers",
-            f"{filter_item}_VaR99": "VaR99",
-        },
-        inplace=True,
-    )
-    VaR99_bottom10.set_index(["Top10 VaR Diversifiers"], inplace=True)
-
-    return VaR99_top10, VaR99_bottom10
-
-
-def aggregate_by_rfid(group: pd.DataFrame) -> pd.DataFrame:
-    '''group and perform aggregation by RFID'''
-
-    return group.groupby('RFID') \
-        .agg(GROUP_AGGREGATIONS) \
-        .reset_index()
+    var_exposure.set_index('UnderlierName', inplace=True)
+    return var_exposure
 
 
 def filter_var95_iso(
@@ -262,6 +184,7 @@ def filter_var95_iso(
     matrix_cov: pd.DataFrame,
     firm_NAV: float,
 ) -> pd.DataFrame:
+    print(filter)
     # agg positions by exposure across fund strats
     filter_VaR95_iso_df_list = []  # contains all compuuted results across all filters
     filter_list = ["VaRTicker"] + list(filter.keys())
@@ -514,18 +437,6 @@ def filter_var99_comp(
         filter_VaR99_comp_df_list.append(VaR99_comp_df)
 
     return filter_VaR99_comp_df_list
-
-
-def multiply_matrices(matrix_cov, exposure, factor_betas_fund):
-    '''matrix multiplication to calculate VaR'''
-    base_matrix = (
-        exposure[:, None].T
-        @ factor_betas_fund.values[:, 1:]
-        @ matrix_cov.values[1:, 1:]
-        @ factor_betas_fund.values[:, 1:].T
-        @ exposure[:, None]
-    )
-    return (base_matrix ** .5)[0]
 
 
 def calculate_mvar(matrix_cov, exposure, factor_betas_fund):

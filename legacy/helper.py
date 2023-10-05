@@ -10,12 +10,11 @@ from scipy.stats import norm
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
-
 PART_A_COLS = ["LD12TRUU Index", "SPX Index", "RIY less RTY", "RAG less RAV"]
 INDEX_COLS = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
 FACTOR_OPERATIONS = {
-    'RIY less RTY': INDEX_COLS[:2],
-    'RAG less RAV': INDEX_COLS[2:],
+    'RIY less RTY': ["RIY Index", "RTY Index"],
+    'RAG less RAV': ["RAG Index", "RAV Index"],
 }
 CALL_VALUES = ['Call', 'C', 'c']
 PUT_VALUES = ['Put', 'P', 'p']
@@ -28,6 +27,7 @@ def imply_smb_gmv(factor_returns: pd.DataFrame) -> pd.DataFrame:
     selects columns in the right order
     '''
 
+    # add factor operation columns
     for target_col, source_cols in FACTOR_OPERATIONS.items():
         col_a, col_b = source_cols
         factor_returns[target_col] = factor_returns[col_a] - \
@@ -72,3 +72,13 @@ def option_price(
         price_list.append(price)
 
     return price_list
+
+
+def calculate_returns(data: pd.DataFrame):
+    ''' calculates returns of a wide column
+        containing only price values per factor
+    '''
+
+    return_data = data / data.shift(1) - 1
+    return_data = return_data.iloc[1:, ]
+    return return_data

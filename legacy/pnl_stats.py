@@ -103,25 +103,35 @@ def MDD_Abs(X):
     return value
 
 
-def NAV_clean(AUM: pd.DataFrame) -> pd.DataFrame:
-    AUM["PeriodEndDate"] = pd.to_datetime(AUM["PeriodEndDate"]).dt.strftime("%Y-%m-%d")
-    daily_agg_NAV = AUM.groupby(
-        [
-            "PeriodEndDate",
-        ]
-    ).agg({"DailyBookPL": "sum", "EndBookNAV": "sum", "Fund": "count"})
-    daily_agg_NAV_filtered = daily_agg_NAV.loc[daily_agg_NAV["Fund"] > 5]
-    for col in daily_agg_NAV_filtered.columns:
-        if "BookPL" in col or "NAV" in col:
-            daily_agg_NAV_filtered[col].astype(float)
-    daily_agg_NAV_filtered["ret"] = daily_agg_NAV_filtered["DailyBookPL"].astype(
-        float
-    ) / daily_agg_NAV_filtered["EndBookNAV"].astype(float).shift(1)
-    daily_agg_NAV_filtered = daily_agg_NAV_filtered.loc[
-        abs(daily_agg_NAV_filtered["ret"]) < 1
+def clean_nav(aum: pd.DataFrame) -> pd.DataFrame:
+
+    clean_aum = convert_aum_columns(aum)
+    daily_nav_agg = clean_aum\
+        .groupby("PeriodEndDate")\
+        .agg({"DailyBookPL": "sum", "EndBookNAV": "sum", "Fund": "count"})
+
+    daily_nav_nav_filtered = daily_nav_agg[daily_nav_agg['Fund'] > 5]
+
+    # calculate returns
+    daily_nav_nav_filtered['ret'] = daily_nav_nav_filtered.DailyBookPL / \
+        daily_nav_nav_filtered.EndBookNAV.shift(1)
+
+    # keep only days, where abs or ret is lower than 1
+    daily_nav_nav_filtered = daily_nav_nav_filtered.loc[
+        abs(daily_nav_nav_filtered["ret"]) < 1
     ]
 
-    return daily_agg_NAV_filtered
+    return daily_nav_nav_filtered
+
+
+def convert_aum_columns(aum: pd.DataFrame) -> pd.DataFrame:
+    '''ensure right data types for aum columns'''
+
+    aum["PeriodEndDate"] = pd.to_datetime(aum["PeriodEndDate"]).dt.date
+    for col in aum.columns:
+        if "BookPL" in col or "NAV" in col:
+            aum[col].astype(float)
+    return aum
 
 
 def return_analysis(AUM: pd.DataFrame) -> pd.DataFrame:
@@ -145,7 +155,8 @@ def return_analysis(AUM: pd.DataFrame) -> pd.DataFrame:
     return_analysis_dict["MTD Return"] = MTD_return
     # 3. ytd return
     AUM["year"] = pd.to_datetime(AUM.index).strftime("%Y")
-    current_year = [i for i, x in enumerate(ayear) if ((x == datetime.now().year))]
+    current_year = [i for i, x in enumerate(
+        ayear) if ((x == datetime.now().year))]
     AUM_YTD = AUM.iloc[current_year][["ret", "SPX Index"]]
     YTD_return = pd.DataFrame(
         ((1 + AUM_YTD).cumprod() - 1).iloc[-1, :], index=columns, columns=index
@@ -195,11 +206,13 @@ def return_analysis(AUM: pd.DataFrame) -> pd.DataFrame:
     annualized_downside_volatility_df_list = []
     for col in AUM[["ret", "SPX Index"]].columns:
         annualized_downside_volatility_df = pd.DataFrame(
-            np.std(AUM[[col]].loc[AUM[col] < 0]) * (np.sqrt(ANNUALIZATION_FACTOR)),
+            np.std(AUM[[col]].loc[AUM[col] < 0]) *
+            (np.sqrt(ANNUALIZATION_FACTOR)),
             index=[col],
             columns=index,
         ).T
-        annualized_downside_volatility_df_list.append(annualized_downside_volatility_df)
+        annualized_downside_volatility_df_list.append(
+            annualized_downside_volatility_df)
     annualized_downside_volatility = pd.concat(
         annualized_downside_volatility_df_list, axis=1
     )
@@ -343,6 +356,7 @@ def comparative_statistics(AUM: pd.DataFrame, return_analysis_df: pd.DataFrame):
         .reset_index(level=0)
         .rename({"level_0": "Comparative Statistics"}, axis=1)
     )
-    comparative_statistics_df.set_index(["Comparative Statistics"], inplace=True)
+    comparative_statistics_df.set_index(
+        ["Comparative Statistics"], inplace=True)
 
     return comparative_statistics_df
