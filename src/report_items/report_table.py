@@ -23,6 +23,7 @@ class ReportTable(ReportItem):
     values_format: Any = 'currency'
     date_format: Any = None
     table_name: str = 'some table'
+    header_style: str = 'centered_header'
 
     @property
     def range(self) -> Tuple[Tuple[int, int]]:

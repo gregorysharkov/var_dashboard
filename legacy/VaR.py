@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from legacy.helper import imply_SMB_GMV, option_price
+from legacy.helper import imply_smb_gmv, option_price
 
 pd.set_option("mode.chained_assignment", None)
 
@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 RISK_FREE_RATE = 5.5e-2  # as of Aug 2023
 
 
-def filter_VaR_grouping(
+def filter_var_grouping(
     df: pd.DataFrame,
     position_list: List,
     fund_list: List,
@@ -49,18 +49,27 @@ def filter_VaR_grouping(
     )
 
 
+def generate_factor_returns(factor_prices: pd.DataFrame) -> pd.DataFrame:
+    '''generates factor returns from factor prices'''
+
+    return np.log(
+        factor_prices.iloc[1:, :] / factor_prices.iloc[1:, :].shift(1)
+    )  # type: ignore
+
+
 def matrix_correlation(
     factor_prices: pd.DataFrame,
     factor: pd.DataFrame,
 ) -> pd.DataFrame:
-    factor_returns = np.log(
-        factor_prices.iloc[1:, :] / factor_prices.iloc[1:, :].shift(1)
-    )
-    factor_returns = imply_SMB_GMV(factor_returns)
+    '''calculates factor correlation matrix'''
+    factor_returns = generate_factor_returns(factor_prices)
+    factor_returns = imply_smb_gmv(factor_returns)  # type: ignore
     factor_correl = factor_returns.corr()
     factor.set_index(["FactorID"], inplace=True)
     factor_correl = pd.merge(
-        factor_correl, factor["Factor Names"], left_index=True, right_index=True
+        factor_correl, factor["Factor Names"],
+        left_index=True,
+        right_index=True,
     )
     factor_correl.reset_index(inplace=True, drop=True)
     factor_correl.set_index(["Factor Names"], inplace=True)
@@ -70,10 +79,8 @@ def matrix_correlation(
 
 
 def decay_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
-    factor_returns = np.log(
-        factor_prices.iloc[1:, :] / factor_prices.iloc[1:, :].shift(1)
-    )
-    factor_returns = imply_SMB_GMV(factor_returns)
+    factor_returns = generate_factor_returns(factor_prices)
+    factor_returns = imply_smb_gmv(factor_returns)
     nn = np.linspace(start=1, stop=len(
         factor_returns), num=len(factor_returns))
     df = ((1 - 0.94) * 0.94 ** (nn - 1)) ** (0.5)
@@ -86,10 +93,8 @@ def decay_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
 
 
 def matrix_cov(factor_prices: pd.DataFrame) -> pd.DataFrame:
-    factor_returns = np.log(
-        factor_prices.iloc[1:, :] / factor_prices.iloc[1:, :].shift(1)
-    )
-    factor_returns = imply_SMB_GMV(factor_returns)
+    factor_returns = generate_factor_returns(factor_prices)
+    factor_returns = imply_smb_gmv(factor_returns)  # type: ignore
     factor_cov = factor_returns.cov()
 
     return factor_cov
@@ -744,10 +749,10 @@ def filter_Var99_comp(
     return filter_VaR99_comp_df_list
 
 
-def VaR_structuring(
-    VaR95_filtered_iso: List,
+def var_structuring(
+    var95_filtered_iso: List,
     VaR99_filtered_iso: List,
-    VaR95_filtered_inc: List,
+    var95_filtered_inc: List,
     VaR99_filtered_inc: List,
     VaR95_filtered_comp: List,
     VaR99_filtered_comp: List,
@@ -761,8 +766,8 @@ def VaR_structuring(
     industry_list = []
     country_list = []
     mktcap_list = []
-    for ix in range(0, len(VaR95_filtered_iso)):
-        df = VaR95_filtered_iso[ix]
+    for ix in range(0, len(var95_filtered_iso)):
+        df = var95_filtered_iso[ix]
         (
             position_list,
             fund_list,
@@ -770,7 +775,7 @@ def VaR_structuring(
             industry_list,
             country_list,
             mktcap_list,
-        ) = filter_VaR_grouping(
+        ) = filter_var_grouping(
             df,
             position_list,
             fund_list,
@@ -788,7 +793,7 @@ def VaR_structuring(
             industry_list,
             country_list,
             mktcap_list,
-        ) = filter_VaR_grouping(
+        ) = filter_var_grouping(
             df,
             position_list,
             fund_list,
@@ -797,8 +802,8 @@ def VaR_structuring(
             country_list,
             mktcap_list,
         )
-    for ix in range(0, len(VaR95_filtered_inc)):
-        df = VaR95_filtered_inc[ix]
+    for ix in range(0, len(var95_filtered_inc)):
+        df = var95_filtered_inc[ix]
         (
             position_list,
             fund_list,
@@ -806,7 +811,7 @@ def VaR_structuring(
             industry_list,
             country_list,
             mktcap_list,
-        ) = filter_VaR_grouping(
+        ) = filter_var_grouping(
             df,
             position_list,
             fund_list,
@@ -824,7 +829,7 @@ def VaR_structuring(
             industry_list,
             country_list,
             mktcap_list,
-        ) = filter_VaR_grouping(
+        ) = filter_var_grouping(
             df,
             position_list,
             fund_list,
@@ -842,7 +847,7 @@ def VaR_structuring(
             industry_list,
             country_list,
             mktcap_list,
-        ) = filter_VaR_grouping(
+        ) = filter_var_grouping(
             df,
             position_list,
             fund_list,
@@ -860,7 +865,7 @@ def VaR_structuring(
             industry_list,
             country_list,
             mktcap_list,
-        ) = filter_VaR_grouping(
+        ) = filter_var_grouping(
             df,
             position_list,
             fund_list,

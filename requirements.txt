@@ -8,3 +8,4 @@ numpy<1.20,>=1.16.0
 # ydata-profiling
 matplotlib
 xlsxwriter
+openpyxl

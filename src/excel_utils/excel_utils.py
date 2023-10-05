@@ -24,7 +24,7 @@ def insert_text(worksheet, table, text) -> None:
 def merge_above(worksheet, table: ReportTable, style, text) -> None:
     '''inserts a text above the given element'''
 
-    (start_col, start_row), (end_col, end_row) = table.range  # type: ignore
+    (start_col, start_row), (end_col, _) = table.range  # type: ignore
 
     start_row -= 1
 
@@ -35,12 +35,13 @@ def merge_above(worksheet, table: ReportTable, style, text) -> None:
 def merge_to_left(worksheet, table: ReportTable, style, text) -> None:
     '''inserts merged range to the left'''
     # pylint: disable=W0621
-    (start_col, start_row), (end_col, end_row) = table.range  # type: ignore
+    (start_col, start_row), (_, end_row) = table.range  # type: ignore
 
-    worksheet.merge_range(start_row, start_col-1,
-                          end_row, start_col-1,
-                          text, style
-                          )
+    worksheet.merge_range(
+        start_row, start_col-1,
+        end_row, start_col-1,
+        text, style
+    )
 
 
 def insert_table(
@@ -70,18 +71,29 @@ def insert_table(
     end_col, end_row = report_table.range[1]  # type: ignore
     end_col = end_col - 1
 
+    # try:
     worksheet.add_table(  # type: ignore
         start_row, start_col,
         end_row, end_col,
         {
             'data': report_table.data.values,
             'name': report_table.table_name,
-            'columns': _set_column_types(report_table),
+            'columns': _set_column_types(
+                report_table,
+                report_table.header_style
+            ),
             'autofilter': False,
             'banded_rows': False,
             'style': 'Table Style Medium 16',
         }
     )
+
+    worksheet.set_row(
+        report_table.position[1]-1, FORMATS.get('centered_header'))
+    #     table.set_header(report_table.data.columns, {'header_format': FORMATS.get(
+    #         'centered_column_header'), 'align': 'center'})
+    # except AttributeError:
+    #     pass
 
 
 def apply_conditional_formatting(
@@ -112,43 +124,47 @@ def apply_conditional_formatting(
     )
 
 
-def _set_column_types(report_table):
+def _set_column_types(report_table, header_style):
     '''wrapper for calling the proper collumn type setter'''
 
     if isinstance(report_table.values_format, list):
-        return _set_manual_column_types(report_table)
+        return _set_manual_column_types(report_table, header_style)
 
-    return _set_static_column_types(report_table)
+    return _set_static_column_types(report_table, header_style)
 
 
-def _set_static_column_types(report_table):
+def _set_static_column_types(report_table, header_style):
     '''generates a dictionary of formats'''
     return_list = []
 
     data = report_table.data
     data_types = [str(x) for x in list(data.dtypes)]
-    for column, column_type in zip(data.columns, data_types):
+    for idx, (column, column_type) in enumerate(zip(data.columns, data_types)):
         column_format = report_table.date_format \
             if 'date' in column_type else report_table.values_format
         return_list.append({
             'header': column,
             'format': column_format,
+            'header_format': FORMATS.get(header_style),
+            # 'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list
 
 
-def _set_manual_column_types(report_table):
+def _set_manual_column_types(report_table, header_style):
     '''sets each column a type specified in a list of values format'''
 
     return_list = []
-    for column, value_format in zip(
+    for idx, (column, value_format) in enumerate(zip(
         report_table.data.columns,
         report_table.values_format
-    ):
+    )):
         return_list.append({
             'header': column,
             'format': value_format,
+            'header_format': FORMATS.get(header_style),
+            # 'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list

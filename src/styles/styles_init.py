@@ -37,6 +37,7 @@ def set_styles(workbook) -> Dict[str, Any]:
         'report_header_date': hs.add_header_date(workbook),
         'merged_horizontal': ts.add_merged_horizontal(workbook),
         'merged_vertical': ts.add_merged_vertical(workbook),
+        'centered_header': workbook.add_format({'bold': True, 'align': 'center'}),
     }
 
     return styles_dict

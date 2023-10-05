@@ -37,3 +37,12 @@ def add_header_date(workbook) -> Any:
     style.set_bottom(5)
 
     return style
+
+
+def centered_header(workbook) -> Any:
+    '''adds header of the report'''
+
+    style = workbook.add_format()
+    style.set_align('center')
+
+    return style

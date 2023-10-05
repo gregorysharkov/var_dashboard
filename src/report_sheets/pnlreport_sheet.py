@@ -50,7 +50,7 @@ def generate_pnlreport_sheet(
 
     return_analysis_stats = ReportTable(
         data=data_dict.get('return_analysis_stats'),  # type: ignore
-        values_format=styles.get('percentage'),
+        values_format=styles.get('float'),
         table_name='return_analysis_stats',
         initial_position=(1, 27),
     )
@@ -66,8 +66,34 @@ def generate_pnlreport_sheet(
     )
     eu.insert_table(worksheet, comparative_analysis_stats)
 
-    volatility_stats = WorksheetChart(
+    monthly_pnl_table = ReportTable(
+        data=data_dict.get('monthly_pnl'),  # type: ignore
+        values_format=styles.get('percentage'),
+        # [
+        #     styles.get('integer'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        #     styles.get('percentage'),
+        # ],
+        table_name='monthly_pnl',
         snap_element=return_analysis_stats,
+        snap_mode=SnapType.DOWN,
+        margin=2,
+
+    )
+    eu.insert_table(worksheet, monthly_pnl_table, date_index=False)
+
+    volatility_stats = WorksheetChart(
+        snap_element=monthly_pnl_table,
         snap_mode=SnapType.DOWN,
         margin=2,
         table_name='aum_clean',
