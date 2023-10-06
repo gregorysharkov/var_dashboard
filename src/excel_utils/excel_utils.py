@@ -147,6 +147,7 @@ def _set_static_column_types(report_table, header_style):
             'format': column_format,
             'header_format': FORMATS.get(header_style),
             # 'align': {'text': 'left' if idx == 0 else 'center'},
+            'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list
@@ -165,6 +166,7 @@ def _set_manual_column_types(report_table, header_style):
             'format': value_format,
             'header_format': FORMATS.get(header_style),
             # 'align': {'text': 'left' if idx == 0 else 'center'},
+            'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list
