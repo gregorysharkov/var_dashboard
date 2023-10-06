@@ -37,6 +37,7 @@ def _adjust_table(table: pd.DataFrame) -> pd.DataFrame:
     table = _add_window_std(table, '20D Volatility', 20)
     table = _add_volatility_budget(table, 'Volatility Budget')
     table.rename({'ret': 'Daily Return'}, axis=1, inplace=True)
+    table.dropna(inplace=True)
 
     return table
 

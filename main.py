@@ -36,6 +36,19 @@ def read_xlsx(xlsx_path: str, sheet_name: str, cols: List[str]) -> pd.DataFrame:
     return df[cols]
 
 
+IBIS_FUNDS = [
+    'S2_C-IBIS',
+    'S2_M-IBIS',
+    'S2_IPO_IBIS',
+    'S2_IBIS45_NEWPARADIGM',
+    'S2_IBIS27_ALLERMUIR',
+    'S2_IBIS11_HAGERTY',
+    'S2_IBIS38_CROBERTSON',
+    'S2_IBIS23_GSMITH',
+    'S2_IBIS123_GISONDI',
+    'S2_IBIS111_HIGHATLAS',
+]
+
 if __name__ == "__main__":
     parser = ArgumentParser(description="")
     parser.add_argument(
@@ -105,7 +118,11 @@ if __name__ == "__main__":
         axis=1,
         inplace=True
     )
+
+    position = position.loc[position.Strat.isin(IBIS_FUNDS)]
+
     AUM = pd.read_excel("data/Historical Pnl and Nav.xlsx")
+    AUM = AUM[AUM.Fund.isin(IBIS_FUNDS)]
     # AUM = pd.read_csv("data/Historical Pnl and Nav.csv",
     #                   sep=';', decimal='.',)
     AUM_clean = pnl_stats.NAV_clean(AUM)  # model NAVs
@@ -463,12 +480,14 @@ if __name__ == "__main__":
             values='Daily Return',
             aggfunc='sum'
         )\
+        .reindex(columns=range(1, 13))\
         .fillna(0)
 
-    monthly_pnl_data.columns = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ]
+    monthly_pnl_data.columns = pd.date_range(
+        start='2022-01-01',
+        periods=12,
+        freq='MS',
+    ).strftime('%B')
     print(monthly_pnl_data.head())
     rsh.generate_pnlreport_sheet(
         writer,

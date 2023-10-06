@@ -88,8 +88,8 @@ def insert_table(
         }
     )
 
-    worksheet.set_row(
-        report_table.position[1]-1, FORMATS.get('centered_header'))
+    # worksheet.set_row(
+    #     report_table.position[1]-1, FORMATS.get('centered_header'))
     #     table.set_header(report_table.data.columns, {'header_format': FORMATS.get(
     #         'centered_column_header'), 'align': 'center'})
     # except AttributeError:
@@ -145,9 +145,9 @@ def _set_static_column_types(report_table, header_style):
         return_list.append({
             'header': column,
             'format': column_format,
-            'header_format': FORMATS.get(header_style),
+            # 'header_format': FORMATS.get(header_style),
             # 'align': {'text': 'left' if idx == 0 else 'center'},
-            'align': {'text': 'left' if idx == 0 else 'center'},
+            # 'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list
@@ -164,9 +164,9 @@ def _set_manual_column_types(report_table, header_style):
         return_list.append({
             'header': column,
             'format': value_format,
-            'header_format': FORMATS.get(header_style),
+            # 'header_format': FORMATS.get(header_style),
             # 'align': {'text': 'left' if idx == 0 else 'center'},
-            'align': {'text': 'left' if idx == 0 else 'center'},
+            # 'align': {'text': 'left' if idx == 0 else 'center'},
         })
 
     return return_list

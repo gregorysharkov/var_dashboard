@@ -4,9 +4,14 @@ from typing import Any, Dict
 
 from . import header_styles as hs
 from . import table_styles as ts
-from .table_styles import (CURRENCY_FORMAT, FLOAT_FORMAT,
-                           FLOAT_NO_COLOR_FORMAT, INTEGER_FORMAT,
-                           PERCENTAGE_FORMAT, PERCENTAGE_NO_COLOR_FORMAT)
+from .table_styles import (
+    CURRENCY_FORMAT,
+    FLOAT_FORMAT,
+    FLOAT_NO_COLOR_FORMAT,
+    INTEGER_FORMAT,
+    PERCENTAGE_FORMAT,
+    PERCENTAGE_NO_COLOR_FORMAT,
+)
 
 FORMATS = {
     'currency_text': CURRENCY_FORMAT,
