@@ -81,6 +81,31 @@ def parse_holdings_date(args):
     return holdings_date
 
 
+def calculate_global_returns(price: pd. DataFrame) -> pd.DataFrame:
+    '''
+    function calculates global returns from a given price dataframe
+    Returns are generated in the long format with each row representing a
+    single date and having a var ticker and its return for that day
+    '''
+
+    global_returns = calculate_returns(price)
+    global_returns.reset_index(inplace=True)
+    global_returns.date = pd.to_datetime(
+        global_returns.date,
+        format=r'%Y-%m-%d',
+    ).dt.date
+    global_returns.rename(columns={'date': 'TradeDate'}, inplace=True)
+
+    global_returns_long = global_returns\
+        .melt(
+            id_vars='TradeDate',
+            value_name='return',
+            var_name='VaRTicker',
+        )
+
+    return global_returns_long
+
+
 if __name__ == "__main__":
     args = parse_arguments()
     price_vol_shock_range = parse_price_vol_shock_range(args)
@@ -99,25 +124,26 @@ if __name__ == "__main__":
     price.set_index(["date"], inplace=True)
 
     # read and process raw positions
-    RAW_POSITION_COLS = [
-        'Expiry', 'FundName',
-        'PutCall', 'Delta', 'Quantity', 'MarketPrice',
-        'PX_POS_MULT_FACTOR', 'UndlPrice', 'Strike',
-        'Gamma$', 'Vega', 'Theta', 'MtyYears', 'IVOL_TM',
-        'FXRate', 'Description'
-    ]
-    raw_positions = read_xlsx(
-        'data/Master_varFactor_Engine_2.xlsm',
-        'RawPositions',
-        RAW_POSITION_COLS,
-    )
-    raw_positions['Expiry'] = pd.to_datetime(raw_positions['Expiry'])
+    # RAW_POSITION_COLS = [
+    #     'Expiry', 'FundName',
+    #     'PutCall', 'Delta', 'Quantity', 'MarketPrice',
+    #     'PX_POS_MULT_FACTOR', 'UndlPrice', 'Strike',
+    #     'Gamma$', 'Vega', 'Theta', 'MtyYears', 'IVOL_TM',
+    #     'FXRate', 'Description'
+    # ]
+    # raw_positions = read_xlsx(
+    #     'data/Master_varFactor_Engine_2.xlsm',
+    #     'RawPositions',
+    #     RAW_POSITION_COLS,
+    # )
+    # raw_positions['Expiry'] = pd.to_datetime(raw_positions['Expiry'])
 
-    # read and process positions
-    position = pd.read_csv("data/positions.csv")
-    position["MarketValue"] = position["MarketValue"].astype(float)
-    for col in RAW_POSITION_COLS:
-        position[col] = raw_positions[col]
+    # # read and process positions
+    # position = pd.read_csv("data/positions.csv")
+    position = pd.read_excel("data/positions.xlsx")
+    # position["MarketValue"] = position["MarketValue"].astype(float)
+    # for col in RAW_POSITION_COLS:
+    #     position[col] = raw_positions[col]
     # TODO: Sometimes Exposure, sometimes varExposure, converge to the first
     # TODO: Sometimes MarketCap.1, sometimes MarketCap, converge to the first
     # TODO: VarTicker -> VarTicker
@@ -133,6 +159,7 @@ if __name__ == "__main__":
         axis=1,
         inplace=True
     )
+
     aum = pd.read_excel("data/Historical Pnl and Nav.xlsx")
     # AUM = pd.read_csv("data/Historical Pnl and Nav.csv",
     #                   sep=';', decimal='.',)
@@ -164,12 +191,12 @@ if __name__ == "__main__":
     position["Exposure"] = position["Exposure"].astype(float)
     position.TradeDate = pd.to_datetime(
         position.TradeDate,
-        format=r'%m/%d/%Y'  # r'%Y-%m-%d',
+        format=r'%Y-%m-%d',  # r'%m/%d/%Y'
     ).dt.date
 
     # structure positions, factor, price data for subsequent estimation of Factor
     # betas, vars, Exposures, and Stress Tests
-    price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
+    # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
     # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
@@ -202,53 +229,25 @@ if __name__ == "__main__":
     logger.info("review input data")
 
     # 1.a. estimate factor betas, factor vols
+    # logger.info('Calculating factor betas')
     factor_returns = calculate_returns(factor_prices)
     factor_returns = imply_smb_gmv(factor_returns)
     logger.info('Done with factor returns estimation')
-    position_returns = calculate_returns(position_prices)
-    logger.info('Done with position returns estimation')
+    # position_returns = calculate_returns(position_prices)
+    # logger.info('Done with position returns estimation')
 
-    factor_betas = fac.calculate_position_betas(
-        factor_returns, position_returns)
+    # factor_betas = fac.calculate_position_betas(
+    #     factor_returns, position_returns)
+    # logger.info('Done with factor betas estimation')
 
     # calculate fund returns
-    global_returns = calculate_returns(price)
-    global_returns.reset_index(inplace=True)
-    global_returns.date = pd.to_datetime(
-        global_returns.date,
-        format=r'%Y-%m-%d',
-    ).dt.date
-    global_returns.rename(columns={'date': 'TradeDate'}, inplace=True)
+    global_factor_returns = calculate_global_returns(price)
+    logger.info('Done with global returns estimation')
 
-    global_returns_long = global_returns\
-        .melt(
-            id_vars='TradeDate',
-            value_name='return',
-            var_name='VaRTicker',
-        )
-
-    # select and format position table
-    selected_positions = position[['TradeDate', 'VaRTicker', 'FundName']]
-    # selected_positions.TradeDate = pd.to_datetime(
-    #     selected_positions.TradeDate,
-    #     format=r'%m/%d/%Y',
-    # ).dt.date
-
-    print(f'{position.dtypes=}')
     # group returns by fund
-
-    fund_returns = global_returns_long\
-        .merge(selected_positions, on=['TradeDate', 'VaRTicker'])\
-        .groupby(['TradeDate', 'FundName'])\
-        .agg({'return': 'sum'})\
-        .unstack(level=1)\
-        .reset_index()\
-        .rename(columns={'TradeDate': 'date'})\
-        .set_index('date')
-
-    fund_betas = fac.calculate_position_betas(fund_returns, position_returns)
-
-    logger.info('Done with factor betas estimation')
+    global_position_returns = global_factor_returns\
+        .merge(position, on=['TradeDate', 'VaRTicker'])
+    logger.info('Done with factor returns estimation')
 
     # 1.b. var functions
     # Create a Pandas Excel writer using XlsxWriter as the engine.
@@ -262,16 +261,16 @@ if __name__ == "__main__":
     matrix_cov = var_utils.covariance_matrix(factor_returns)
     decay_cov = var_utils.decay_covariance_matrix(factor_returns)
 
-    var_exposures = var.filter_var(
-        position=position,
-        factor_betas=factor_betas,
-        matrix_cov=matrix_cov,
-        firm_nav=firm_nav[holdings_date],
-        quantiles=['95', '99'],
-        filter_item='VaRTicker',
-    )
-    var_top10 = var_exposures.sort_values('position_VaR95').iloc[:10]
-    var_bottom10 = var_exposures.sort_values('position_VaR95').iloc[-10:]
+    # var_exposures = var.filter_var(
+    #     positions_returns=position,
+    #     betas=factor_betas,
+    #     matrix_cov=matrix_cov,
+    #     firm_nav=firm_nav[holdings_date],
+    #     quantiles=['95', '99'],
+    #     filter_item='VaRTicker',
+    # )
+    # var_top10 = var_exposures.sort_values('position_VaR95').iloc[:10]
+    # var_bottom10 = var_exposures.sort_values('position_VaR95').iloc[-10:]
 
     filter_items = {
         'position': 'VaRTicker',
@@ -282,13 +281,14 @@ if __name__ == "__main__":
         'mktcap': 'MarketCap.1',
     }
     iso_vars = var.filter_var_ticker_group(
-        position=position,
-        factor_betas=factor_betas,
+        factor_returns=global_factor_returns,
+        position_returns=global_position_returns,
         matrix_cov=matrix_cov,
         firm_nav=firm_nav[holdings_date],
         quantiles=['95', '99'],
         filter_items=filter_items,
     )
+
     var95_filtered_inc = var.filter_var95_inc(
         filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )

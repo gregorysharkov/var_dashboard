@@ -33,14 +33,24 @@ def calculate_position_betas(
             var_name='factor',
             value_name='factor_return',
         )
-    print(factor_returns_long)
+    # print(factor_returns_long)
+
+    # position_returns.to_csv('output/position_returns.csv')
     position_returns_long = position_returns\
         .reset_index()\
-        .melt(
-            id_vars='date',
-            var_name='position',
-            value_name='position_return',
-        )
+        .rename(
+            columns={
+                'position': 'position_return',
+                'TradeDate': 'date',
+            }
+        )\
+        .rename(columns={'VaRTicker': 'position'})
+
+    # .melt(
+    #     id_vars='date',
+    #     var_name='position',
+    #     value_name='position_return',
+    # )
 
     # Merge factor and position returns
     merged_returns = pd.merge(
@@ -53,8 +63,9 @@ def calculate_position_betas(
         - merged_returns.groupby('position')['factor_return'].transform('mean')
 
     # Calculate beta factors for each position and factor
-    beta_factors = calculate_beta_factor_numerator(merged_returns) \
-        / calculate_beta_factors_denominator(merged_returns)
+    numerator = calculate_beta_factor_numerator(merged_returns)
+    denominator = calculate_beta_factors_denominator(merged_returns)
+    beta_factors = numerator / denominator
 
     # Reshape beta factors into a DataFrame
     beta_factors_df = beta_factors\
@@ -64,14 +75,21 @@ def calculate_position_betas(
     return beta_factors_df
 
 
-def calculate_beta_factors_denominator(merged_returns):
-    '''calculates the denominator to calculate factor betas'''
-    return merged_returns.groupby('factor')['factor_rf'].var()
-
-
 def calculate_beta_factor_numerator(merged_returns):
     '''calculates the numerator to calculate factor betas'''
+
+    # print(
+    #     merged_returns
+    #     .groupby(['factor', 'position'])[['position_rf', 'factor_rf']]
+    #     .cov()
+    #     .iloc[::2, 1]
+    # )
     return merged_returns\
         .groupby(['factor', 'position'])[['position_rf', 'factor_rf']]\
         .cov()\
         .iloc[::2, 1]
+
+
+def calculate_beta_factors_denominator(merged_returns):
+    '''calculates the denominator to calculate factor betas'''
+    return merged_returns.groupby('factor')['factor_rf'].var()

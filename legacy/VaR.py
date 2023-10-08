@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+import legacy.Factors as fac
 import legacy.var_utils as var_utils
 from legacy.helper import option_price
 
 pd.set_option("mode.chained_assignment", None)
 
-
 logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 RISK_FREE_RATE = 5.5e-2  # as of Aug 2023
 
@@ -70,8 +70,8 @@ def group_var_report_data_by_type(
 #     return factor_returns.iloc[1:, :]  # type: ignore
 
 def filter_var_ticker_group(
-    position: pd.DataFrame,
-    factor_betas: pd.DataFrame,
+    position_returns: pd.DataFrame,
+    factor_returns: pd.DataFrame,
     matrix_cov: pd.DataFrame,
     firm_nav: float,
     quantiles: List[str],
@@ -100,42 +100,48 @@ def filter_var_ticker_group(
 
     return_dict = {}
     for group_name, column_name in filter_items.items():
+        logger.info('Calculating VaR for %s', group_name)
         group_var = filter_var(
-            position=position,
-            factor_betas=factor_betas,
+            factor_returns=factor_returns,
+            position_returns=position_returns,
             matrix_cov=matrix_cov,
             firm_nav=firm_nav,
             quantiles=quantiles,
             filter_item=column_name,
         )
         return_dict[group_name] = group_var
-
+        logger.info('Done calculating VaR for %s', group_name)
     return return_dict
 
 
 def filter_var(
-    position: pd.DataFrame,
-    factor_betas: pd.DataFrame,
+    factor_returns: pd.DataFrame,
+    position_returns: pd.DataFrame,
     matrix_cov: pd.DataFrame,
     firm_nav: float,
     quantiles: List[str],
     filter_item: str = "VaRTicker",
 ) -> pd.DataFrame:
-    '''calculates var exposure per position given a list of quantities'''
+    '''
+    calculates var exposure per position given a list of quantities
+
+    Args:
+        factor_returns: contains returns per market symbol
+        position_returns: contains returns per position
+        matrix_cov: contains covariance matrix
+        firm_nav: float, Net Asset Value for a given firm
+        quantiles: List[str], list of quantiles to be calculated
+        filter_item: string, name of the column in the positions dataframe
+
+    Returns:
+        combined dataframe where given quantiles of var are calculated
+        per each group (filter_item)
+    '''
 
     alfa_quantiles = [QUANTILES.get(quantile) for quantile in quantiles]
 
-    exposure_aggregates = position\
-        .groupby([filter_item])\
-        .agg({"Exposure": "sum"})
-
-    if filter_item != 'VaRTicker':
-        print('something')
-
-    position_exposure = var_utils.multiply_matrices(
-        matrix_cov=matrix_cov,
-        exposure=exposure_aggregates,
-        factor_betas=factor_betas,
+    group_exposure = calculate_group_exposure(
+        factor_returns, position_returns, matrix_cov, filter_item
     )
 
     var_exposures = []
@@ -143,7 +149,7 @@ def filter_var(
         var_exposure = calculate_exposure(
             firm_nav=firm_nav,
             filter_item=filter_item,
-            position_exposure=position_exposure,
+            group_exposure=group_exposure,
             alfa=alfa,  # type: ignore
             quantile=quantile
         )
@@ -153,16 +159,62 @@ def filter_var(
     return combined_exposures
 
 
+def calculate_group_exposure(
+    factor_returns: pd.DataFrame,
+    position_returns: pd.DataFrame,
+    matrix_cov: pd.DataFrame,
+    group_column: str,
+) -> pd.DataFrame:
+    '''
+    function calculates exposure for a given group
+
+    Args:
+        factor_returns. Returns calculated asset wise.
+            For each market symbol. Wide format
+        position_returns: Returns calculated position-wise.
+            Per each position at trading date
+        matrix_cov: Covariance matrix of factor returns between them
+            n x n matrix. each column is a market symbol
+
+    Returns:
+        a var exposure adjusted by betas and covariance matrix for each group
+    '''
+
+    group_returns = position_returns\
+        .groupby(['TradeDate', group_column])\
+        .agg({
+            'return': 'sum',
+        })\
+        .unstack(level=1)\
+        .reset_index()\
+        .rename(columns={'TradeDate': 'date'})\
+        .set_index('date')
+
+    group_exposure = position_returns\
+        .groupby(group_column)\
+        .agg({"Exposure": "sum"})
+
+    group_betas = fac.calculate_position_betas(group_returns, factor_returns)
+
+    exposure = var_utils.multiply_matrices(
+        matrix_cov=matrix_cov,
+        exposure=group_exposure,
+        factor_betas=group_betas,
+    )
+
+    return exposure
+
+
 def calculate_exposure(
     firm_nav: float,
     filter_item: str,
-    position_exposure: pd.DataFrame,
+    group_exposure: pd.DataFrame,
     alfa: float,
     quantile: str,
 ) -> pd.DataFrame:
     '''calculates var exposure for given filter item and the given quantile'''
 
-    var_exposure = position_exposure * alfa / firm_nav
+    var_exposure = group_exposure * alfa / firm_nav
     var_exposure.reset_index(inplace=True)
     var_exposure.rename(
         columns={
@@ -877,7 +929,7 @@ def stress_test_structuring(
     stress_test_arr = np.reshape(
         stress_test_arr, (int(np.sqrt(len(dict))), int(np.sqrt(len(dict))))
     ).T
-    LOGGER.info("convert results into summary tbl")
+    logger.info("convert results into summary tbl")
     stress_test_results_df = pd.DataFrame(
         stress_test_arr, index=list(reversed(vol_shock_list)), columns=price_shock_list
     )
