@@ -84,42 +84,40 @@ if __name__ == "__main__":
     price.set_index(["date"], inplace=True)
 
     # read and process raw positions
-    RAW_POSITION_COLS = [
-        'Expiry', 'FundName',
-        'PutCall', 'Delta', 'Quantity', 'MarketPrice',
-        'PX_POS_MULT_FACTOR', 'UndlPrice', 'Strike',
-        'Gamma$', 'Vega', 'Theta', 'MtyYears', 'IVOL_TM',
-        'FXRate', 'Description'
-    ]
-    raw_positions = read_xlsx(
-        'data/Master_VaRFactor_Engine_2.xlsm',
-        'RawPositions',
-        RAW_POSITION_COLS,
-    )
-    raw_positions['Expiry'] = pd.to_datetime(raw_positions['Expiry'])
+    # RAW_POSITION_COLS = [
+    #     'Expiry', 'FundName',
+    #     'PutCall', 'Delta', 'Quantity', 'MarketPrice',
+    #     'PX_POS_MULT_FACTOR', 'UndlPrice', 'Strike',
+    #     'Gamma$', 'Vega', 'Theta', 'MtyYears', 'IVOL_TM',
+    #     'FXRate', 'Description'
+    # ]
+    # raw_positions = read_xlsx(
+    #     'data/Master_VaRFactor_Engine_2.xlsm',
+    #     'RawPositions',
+    #     RAW_POSITION_COLS,
+    # )
+    # raw_positions['Expiry'] = pd.to_datetime(raw_positions['Expiry'])
 
     # read and process positions
-    position = pd.read_csv("data/positions.csv")
-    position["MarketValue"] = position["MarketValue"].astype(float)
-    for col in RAW_POSITION_COLS:
-        position[col] = raw_positions[col]
+    position = pd.read_excel(
+        'data/positions.xlsx', sheet_name='RawPositions', header=0)
     # TODO: Sometimes Exposure, sometimes VaRExposure, converge to the first
     # TODO: Sometimes MarketCap.1, sometimes MarketCap, converge to the first
     # TODO: VarTicker -> VaRTicker
     # TODO: UnderlierSymbol -> UnderlierName
+    print(position.columns)
     position.rename(
-        {
+        columns={
             'VaRExposure': 'Exposure',
-            'MarketCap': 'MarketCap.1',
+            # 'MarketCap': 'MarketCap.1',
             'VarTicker': 'VaRTicker',
             'UnderlierSymbol': 'UnderlierName',
             'ProdType': 'SECURITY_TYP',
         },
-        axis=1,
         inplace=True
     )
 
-    position = position.loc[position.Strat.isin(IBIS_FUNDS)]
+    position = position.loc[position.FundName.isin(IBIS_FUNDS)]
 
     AUM = pd.read_excel("data/Historical Pnl and Nav.xlsx")
     AUM = AUM[AUM.Fund.isin(IBIS_FUNDS)]
@@ -175,6 +173,7 @@ if __name__ == "__main__":
     sector_filters = position["Sector"].unique()
     industry_filters = position["Industry"].unique()
     country_filters = position["Country"].unique()
+    print(position.columns)
     mcap_filters = position["MarketCap.1"].unique()
     filters_dict = {
         "FundName": strat_filters,
@@ -252,6 +251,7 @@ if __name__ == "__main__":
 
     # # 1.c Stress Test functions
     # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
+    print(position.dtypes)
     stress_test_beta_price_vol_calc = VaR.filter_stress_test_beta_price_vol(
         filters_dict, factor_prices, position, factor_betas, price_vol_shock_range
     )
