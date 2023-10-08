@@ -1,4 +1,8 @@
+'''format of the excel sheet after all reports have been placed'''
+
+
 def format_dashboard_worksheet(worksheet, layout) -> None:
+    '''formats the dashboard worksheet after all reports have been placed'''
     for col in layout.NUMERIC_COLUMNS:
         worksheet.set_column(f'{col}:{col}', layout.NUMERIC_COLUMNS_WIDTH)
 

@@ -11,10 +11,21 @@ def calculate_position_betas(
     factor_returns: pd.DataFrame,
     position_returns: pd.DataFrame,
 ) -> pd.DataFrame:
-    '''returns adjusted poistion level betas for each factor'''
-    # Outputs:
-    # Position level beta to each factor
+    '''
+    Calculates the adjusted position-level betas for each factor.
 
+    Args:
+        factor_returns (pd.DataFrame): A DataFrame of factor returns
+            with dates as index and factor names as columns.
+        position_returns (pd.DataFrame): A DataFrame of position returns
+            with dates as index and position names as columns.
+
+    Returns:
+        pd.DataFrame: A DataFrame of adjusted position-level betas for
+            each factor, with position names as index and factor names as columns.
+    '''
+
+    # Position level beta to each factor
     factor_returns_long = factor_returns\
         .reset_index()\
         .melt(
@@ -22,6 +33,7 @@ def calculate_position_betas(
             var_name='factor',
             value_name='factor_return',
         )
+    print(factor_returns_long)
     position_returns_long = position_returns\
         .reset_index()\
         .melt(

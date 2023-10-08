@@ -91,6 +91,11 @@ if __name__ == "__main__":
     price = pd.read_csv("data/prices.csv")
     # TODO: date column may come as date or as Date
     price.rename({'Date': 'date'}, axis=1, inplace=True)
+    price.date = pd.to_datetime(
+        price.date,
+        format=r'%m/%d/%Y',
+    ).dt.date
+
     price.set_index(["date"], inplace=True)
 
     # read and process raw positions
@@ -157,6 +162,10 @@ if __name__ == "__main__":
         position_group_df_list.append(group)
     position = pd.concat(position_group_df_list, axis=0)
     position["Exposure"] = position["Exposure"].astype(float)
+    position.TradeDate = pd.to_datetime(
+        position.TradeDate,
+        format=r'%m/%d/%Y'  # r'%Y-%m-%d',
+    ).dt.date
 
     # structure positions, factor, price data for subsequent estimation of Factor
     # betas, vars, Exposures, and Stress Tests
@@ -201,6 +210,44 @@ if __name__ == "__main__":
 
     factor_betas = fac.calculate_position_betas(
         factor_returns, position_returns)
+
+    # calculate fund returns
+    global_returns = calculate_returns(price)
+    global_returns.reset_index(inplace=True)
+    global_returns.date = pd.to_datetime(
+        global_returns.date,
+        format=r'%Y-%m-%d',
+    ).dt.date
+    global_returns.rename(columns={'date': 'TradeDate'}, inplace=True)
+
+    global_returns_long = global_returns\
+        .melt(
+            id_vars='TradeDate',
+            value_name='return',
+            var_name='VaRTicker',
+        )
+
+    # select and format position table
+    selected_positions = position[['TradeDate', 'VaRTicker', 'FundName']]
+    # selected_positions.TradeDate = pd.to_datetime(
+    #     selected_positions.TradeDate,
+    #     format=r'%m/%d/%Y',
+    # ).dt.date
+
+    print(f'{position.dtypes=}')
+    # group returns by fund
+
+    fund_returns = global_returns_long\
+        .merge(selected_positions, on=['TradeDate', 'VaRTicker'])\
+        .groupby(['TradeDate', 'FundName'])\
+        .agg({'return': 'sum'})\
+        .unstack(level=1)\
+        .reset_index()\
+        .rename(columns={'TradeDate': 'date'})\
+        .set_index('date')
+
+    fund_betas = fac.calculate_position_betas(fund_returns, position_returns)
+
     logger.info('Done with factor betas estimation')
 
     # 1.b. var functions
@@ -242,13 +289,6 @@ if __name__ == "__main__":
         quantiles=['95', '99'],
         filter_items=filter_items,
     )
-    # var95_filtered_iso = var.filter_var95_iso(
-    #     filters_dict, factor_prices, position,
-    #     factor_betas, matrix_cov, firm_nav
-    # )
-    # var99_filtered_iso = var.filter_var99_iso(
-    #     filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
-    # )
     var95_filtered_inc = var.filter_var95_inc(
         filters_dict, factor_prices, position, factor_betas, matrix_cov, firm_nav
     )
