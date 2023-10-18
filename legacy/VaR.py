@@ -145,7 +145,10 @@ def filter_var(
     )
 
     var_exposures = []
-    for alfa, quantile, in zip(alfa_quantiles, quantiles):
+    for alfa, quantile, in tqdm(
+        zip(alfa_quantiles, quantiles),
+        'Calculating group VaR',
+    ):
         var_exposure = calculate_exposure(
             firm_nav=firm_nav,
             filter_item=filter_item,
@@ -185,10 +188,16 @@ def calculate_group_exposure(
         .agg({
             'return': 'sum',
         })\
-        .unstack(level=1)\
         .reset_index()\
-        .rename(columns={'TradeDate': 'date'})\
-        .set_index('date')
+        .rename(
+            columns={
+                'TradeDate': 'date',
+                group_column: 'factor',
+                'return': 'factor_return',
+            }
+        )\
+        # .set_index('date')
+    # .unstack(level=1)\
 
     group_exposure = position_returns\
         .groupby(group_column)\

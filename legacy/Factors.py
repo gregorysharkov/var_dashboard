@@ -16,9 +16,9 @@ def calculate_position_betas(
 
     Args:
         factor_returns (pd.DataFrame): A DataFrame of factor returns
-            with dates as index and factor names as columns.
-        position_returns (pd.DataFrame): A DataFrame of position returns
-            with dates as index and position names as columns.
+            long format.
+        position_returns (pd.DataFrame): A DataFrame of position returns per day
+            long format.
 
     Returns:
         pd.DataFrame: A DataFrame of adjusted position-level betas for
@@ -26,13 +26,13 @@ def calculate_position_betas(
     '''
 
     # Position level beta to each factor
-    factor_returns_long = factor_returns\
-        .reset_index()\
-        .melt(
-            id_vars='date',
-            var_name='factor',
-            value_name='factor_return',
-        )
+    # factor_returns_long = factor_returns\
+    #     .reset_index()\
+    # .melt(
+    #     id_vars='date',
+    #     var_name='factor',
+    #     value_name='factor_return',
+    # )
     # print(factor_returns_long)
 
     # position_returns.to_csv('output/position_returns.csv')
@@ -40,11 +40,11 @@ def calculate_position_betas(
         .reset_index()\
         .rename(
             columns={
-                'position': 'position_return',
+                'return': 'position_return',
                 'TradeDate': 'date',
+                'VaRTicker': 'position'
             }
         )\
-        .rename(columns={'VaRTicker': 'position'})
 
     # .melt(
     #     id_vars='date',
@@ -54,7 +54,7 @@ def calculate_position_betas(
 
     # Merge factor and position returns
     merged_returns = pd.merge(
-        factor_returns_long, position_returns_long, on='date')
+        factor_returns, position_returns_long, on='date', how='inner')
 
     # Calculate factor-adjusted returns for each position
     merged_returns['factor_rf'] = merged_returns['factor_return'] \

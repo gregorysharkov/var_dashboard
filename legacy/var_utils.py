@@ -20,9 +20,9 @@ def multiply_matrices(
     factor_betas_t = factor_betas.T
 
     position_exposure = exposure_t\
-        .dot(factor_betas_t)\
-        .dot(matrix_cov)\
         .dot(factor_betas)\
+        .dot(matrix_cov)\
+        .dot(factor_betas_t)\
         .T
     # .dot(exposure)
     return (position_exposure ** .5)

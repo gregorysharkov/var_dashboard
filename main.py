@@ -15,6 +15,7 @@ import legacy.VaR as var
 import legacy.var_utils as var_utils
 import src.report_sheets as rsh
 from legacy.helper import calculate_returns, imply_smb_gmv
+from src.calculation_engine.var_calculator import calculate_vars
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler = logging.StreamHandler()
@@ -151,9 +152,9 @@ if __name__ == "__main__":
     position.rename(
         {
             'VaRExposure': 'Exposure',
-            'MarketCap': 'MarketCap.1',
+            # 'MarketCap': 'MarketCap.1',
             'VarTicker': 'VaRTicker',
-            'UnderlierSymbol': 'UnderlierName',
+            # 'UnderlierSymbol': 'UnderlierName',
             'ProdType': 'SECURITY_TYP',
         },
         axis=1,
@@ -181,38 +182,42 @@ if __name__ == "__main__":
     cols = position.columns[~position.columns.isin(["RFID"])]
     position = position[cols]
     position_group = position.groupby("VaRTicker")
-    count = 0
-    position_group_df_list = []
-    for name, group in position_group:
-        count += 1
-        group["RFID"] = count
-        position_group_df_list.append(group)
-    position = pd.concat(position_group_df_list, axis=0)
+    position["RFID"] = position_group.cumcount() + 1
+    # position_group = position.groupby("VaRTicker")
+    # count = 0
+    # position_group_df_list = []
+    # for name, group in position_group:
+    #     count += 1
+    #     group["RFID"] = count
+    #     position_group_df_list.append(group)
+    # position = pd.concat(position_group_df_list, axis=0)
     position["Exposure"] = position["Exposure"].astype(float)
     position.TradeDate = pd.to_datetime(
         position.TradeDate,
         format=r'%Y-%m-%d',  # r'%m/%d/%Y'
     ).dt.date
 
+    var_data = calculate_vars(prices=price, positions=position)
+    var_data.to_excel('output/var_data.xlsx')
     # structure positions, factor, price data for subsequent estimation of Factor
     # betas, vars, Exposures, and Stress Tests
     # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
     # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
-    factor_names = list(factor["Factor Names"])
-    factor_names = [name for name in factor_names if str(name) != "nan"]
-    factor_ids_full = list(factor["FactorID"])
-    factors_to_remove = ["RIY less RTY", "RAG less RAV"]
-    factor_ids = [
-        item for item in factor_ids_full if item not in factors_to_remove]
-    factor_prices = price[factor_ids]
-    factor_ids = factor_ids_full
-    factors_to_remove = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
-    factor_ids = [item for item in factor_ids if item not in factors_to_remove]
-    factor = factor.loc[factor["FactorID"].isin(factor_ids)]
-    position_ids = list(position["VaRTicker"].unique())
-    position_prices = price[position_ids]
+    # factor_names = list(factor["Factor Names"])
+    # factor_names = [name for name in factor_names if str(name) != "nan"]
+    # factor_ids_full = list(factor["FactorID"])
+    # factors_to_remove = ["RIY less RTY", "RAG less RAV"]
+    # factor_ids = [
+    #     item for item in factor_ids_full if item not in factors_to_remove]
+    # factor_prices = price[factor_ids]
+    # factor_ids = factor_ids_full
+    # factors_to_remove = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
+    # factor_ids = [item for item in factor_ids if item not in factors_to_remove]
+    # factor = factor.loc[factor["FactorID"].isin(factor_ids)]
+    # position_ids = list(position["VaRTicker"].unique())
+    # position_prices = price[position_ids]
     # strat_filters = position["FundName"].unique()
     # sector_filters = position["Sector"].unique()
     # industry_filters = position["Industry"].unique()
@@ -226,13 +231,12 @@ if __name__ == "__main__":
     #     "MarketCap.1": mcap_filters,
     # }
 
-    logger.info("review input data")
+    # logger.info("review input data")
 
     # 1.a. estimate factor betas, factor vols
     # logger.info('Calculating factor betas')
-    factor_returns = calculate_returns(factor_prices)
-    factor_returns = imply_smb_gmv(factor_returns)
-    logger.info('Done with factor returns estimation')
+    # factor_returns = calculate_returns(factor_prices)
+    # factor_returns = imply_smb_gmv(factor_returns)
     # position_returns = calculate_returns(position_prices)
     # logger.info('Done with position returns estimation')
 
@@ -241,13 +245,13 @@ if __name__ == "__main__":
     # logger.info('Done with factor betas estimation')
 
     # calculate fund returns
-    global_factor_returns = calculate_global_returns(price)
-    logger.info('Done with global returns estimation')
+    # global_factor_returns = calculate_global_returns(price)
+    # logger.info('Done with global returns estimation')
 
     # group returns by fund
-    global_position_returns = global_factor_returns\
-        .merge(position, on=['TradeDate', 'VaRTicker'])
-    logger.info('Done with factor returns estimation')
+    # global_position_returns = global_factor_returns\
+    #     .merge(position, on=['TradeDate', 'VaRTicker'])
+    # logger.info('Done with factor returns estimation')
 
     # 1.b. var functions
     # Create a Pandas Excel writer using XlsxWriter as the engine.
