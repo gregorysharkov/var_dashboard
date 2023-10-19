@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring
 '''testing var engine on a sample portfolio'''
 
 import pandas as pd

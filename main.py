@@ -8,14 +8,15 @@ import pandas as pd
 import pandas_market_calendars as mcal
 import xlsxwriter
 
-import legacy.Exposures as Exposures
-import legacy.Factors as fac
-import legacy.pnl_stats as pnl_stats
-import legacy.VaR as var
-import legacy.var_utils as var_utils
+import src.legacy.Exposures as Exposures
+import src.legacy.Factors as fac
+import src.legacy.pnl_stats as pnl_stats
+import src.legacy.VaR as var
+import src.legacy.var_utils as var_utils
 import src.report_sheets as rsh
-from legacy.helper import calculate_returns, imply_smb_gmv
+from src.calculation_engine.betas_calculator import BetasCalculator
 from src.calculation_engine.var_calculator import calculate_vars
+from src.legacy.helper import calculate_returns, imply_smb_gmv
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler = logging.StreamHandler()
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     holdings_date = parse_holdings_date(args)
 
     # 1. Read in factors, prices, positions, AUM
-    factor = pd.read_csv("data/factors.csv")
+    factor = pd.read_csv("data/factors.csv", sep=';')
     price = pd.read_csv("data/prices.csv")
     # TODO: date column may come as date or as Date
     price.rename({'Date': 'date'}, axis=1, inplace=True)
@@ -197,27 +198,28 @@ if __name__ == "__main__":
         format=r'%Y-%m-%d',  # r'%m/%d/%Y'
     ).dt.date
 
-    var_data = calculate_vars(prices=price, positions=position)
-    var_data.to_excel('output/var_data.xlsx')
+    # var_data = calculate_vars(prices=price, positions=position)
+    # var_data.to_excel('output/var_data.xlsx')
     # structure positions, factor, price data for subsequent estimation of Factor
     # betas, vars, Exposures, and Stress Tests
     # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
     # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
-    # factor_names = list(factor["Factor Names"])
-    # factor_names = [name for name in factor_names if str(name) != "nan"]
-    # factor_ids_full = list(factor["FactorID"])
-    # factors_to_remove = ["RIY less RTY", "RAG less RAV"]
-    # factor_ids = [
-    #     item for item in factor_ids_full if item not in factors_to_remove]
-    # factor_prices = price[factor_ids]
-    # factor_ids = factor_ids_full
-    # factors_to_remove = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
-    # factor_ids = [item for item in factor_ids if item not in factors_to_remove]
-    # factor = factor.loc[factor["FactorID"].isin(factor_ids)]
-    # position_ids = list(position["VaRTicker"].unique())
-    # position_prices = price[position_ids]
+    factor_names = list(factor["Factor Names"])
+    factor_names = [name for name in factor_names if str(name) != "nan"]
+    factor_ids_full = list(factor["FactorID"])
+    factors_to_remove = ["RIY less RTY", "RAG less RAV"]
+    factor_ids = [
+        item for item in factor_ids_full if item not in factors_to_remove]
+    factor_prices = price[factor_ids]
+    factor_ids = factor_ids_full
+    factors_to_remove = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
+    factor_ids = [item for item in factor_ids if item not in factors_to_remove]
+    factor = factor.loc[factor["FactorID"].isin(factor_ids)]
+    position_ids = list(position["VaRTicker"].unique())
+    position_prices = price[position_ids]
+
     # strat_filters = position["FundName"].unique()
     # sector_filters = position["Sector"].unique()
     # industry_filters = position["Industry"].unique()
@@ -235,11 +237,13 @@ if __name__ == "__main__":
 
     # 1.a. estimate factor betas, factor vols
     # logger.info('Calculating factor betas')
-    # factor_returns = calculate_returns(factor_prices)
-    # factor_returns = imply_smb_gmv(factor_returns)
-    # position_returns = calculate_returns(position_prices)
+    factor_returns = calculate_returns(factor_prices)
+    factor_returns = imply_smb_gmv(factor_returns)
+    position_returns = calculate_returns(position_prices)
     # logger.info('Done with position returns estimation')
 
+    beta_calculator = BetasCalculator(position_prices, factor_prices)
+    print(beta_calculator.calculate_beta_factors())
     # factor_betas = fac.calculate_position_betas(
     #     factor_returns, position_returns)
     # logger.info('Done with factor betas estimation')
