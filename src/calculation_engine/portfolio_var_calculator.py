@@ -6,10 +6,11 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 QUANTILES = {
-    '95': 1.644854,
-    '99': 2.326348,
+    '95': norm.ppf(0.95),
+    '99': norm.ppf(0.99),
 }
 
 
@@ -77,12 +78,12 @@ class PortfolioVarCalculator:
         '''returns daily returns of the portfolio'''
         return (
             (self.prices_table.shift(1) - self.prices_table)
-            / self.prices_table.shift(1)
+            / self.prices_table.shift(1) - 1
         )\
             .dropna()
 
     @cached_property
-    def _return_covariance(self) -> pd.DataFrame:
+    def return_covariance(self) -> pd.DataFrame:
         '''returns covariance matrix of the portfolio'''
         return self._position_returns.cov()
 
@@ -91,7 +92,7 @@ class PortfolioVarCalculator:
         '''returns standard deviation of the portfolio'''
         return np.sqrt(
             self._position_weights.T
-            @ self._return_covariance
+            @ self.return_covariance
             @ self._position_weights
         )  # type: ignore
 
