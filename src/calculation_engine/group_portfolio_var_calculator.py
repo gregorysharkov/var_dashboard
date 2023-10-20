@@ -50,7 +50,7 @@ class GroupVarCalculator:
             .agg({'Exposure': 'sum'})
 
     @cached_property
-    def _group_weights(self) -> pd.DataFrame:
+    def _group_weights(self) -> pd.Series:
         '''
         returns position weights in the portfolio
         Output should be something like this
@@ -76,7 +76,7 @@ class GroupVarCalculator:
         groups = self._group_weights.index.levels[0]  # type: ignore
         group_stds = pd.Series()
         for group in groups:
-            group_exposure = self._group_weights.loc[group].Weight
+            group_exposure = self._group_weights.loc[group]
             group_positions = list(group_exposure.index)
             group_return_covariance = self.portfolio_var_calculator\
                 .return_covariance\
@@ -109,9 +109,26 @@ class GroupVarCalculator:
         Fund 2    0.060499
         because combined weight of each fund is .5
         '''
-        fund_weights = self._group_weights.Weight.sum()
+        fund_weights = self._group_weights.groupby(level=0).sum()
         return self.portfolio_var_calculator.portfolio_var(quantile) \
             * fund_weights
+
+    def group_incremental_var(self, quantile) -> pd.Series:
+        '''
+        returns incremental var for given quantile
+        Output should be something like this
+        Fund      IncrementalVar
+        Fund 1    0.001723
+        Fund 2    0.001723
+        '''
+        incremental_var = pd.Series()
+        groups = self._group_weights.index.levels[0]  # type: ignore
+        for group in groups:
+            incremental_var[group] = self._group_incremental_var(
+                group=group,
+                quantile=quantile,
+            )
+        return incremental_var
 
     @cached_property
     def _isolated_group_calculators(self) -> dict[str, Any]:
@@ -130,9 +147,15 @@ class GroupVarCalculator:
             incremental_positions = self.positions_table.loc[
                 ~match_condition, :
             ]
+            # calculator of the portfolio var for the remaining positions
             return_dict[group] = PortfolioVarCalculator(
                 prices_table=self.prices_table,
                 positions_table=incremental_positions,
             )
 
         return return_dict
+
+    def _group_incremental_var(self, group, quantile) -> pd.Series:
+        '''returns incremental var for given quantile'''
+        return self.portfolio_var_calculator.portfolio_var(quantile) \
+            - self._isolated_group_calculators[group].portfolio_var(quantile)

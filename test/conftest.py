@@ -23,6 +23,15 @@ def positions_table():
 
 
 @pytest.fixture
+def grouped_positions_table():
+    return pd.DataFrame({
+        'VaRTicker': ['Asset 1', 'Asset 2', 'Asset 3', 'Asset 1'],
+        'Exposure': [-300, 500, 400, -200],
+        'Fund': ['Fund 1', 'Fund 1', 'Fund 2', 'Fund 2']
+    })
+
+
+@pytest.fixture
 def var_calculator(prices_table, positions_table):
     return PortfolioVarCalculator(
         prices_table=prices_table,
