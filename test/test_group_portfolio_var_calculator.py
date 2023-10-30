@@ -18,7 +18,7 @@ def test_group_isolated_var(prices_table, grouped_positions_table):
     )
 
     # test isolated var
-    isolated_var = calculator.group_isolated_var(QUANTILE)
+    isolated_var = calculator.isolated_var(QUANTILE)
     assert np.isclose(isolated_var['Fund 1'], 0.062406, rtol=TOL)
     assert np.isclose(isolated_var['Fund 2'], 0.063334, rtol=TOL)
 
@@ -32,7 +32,7 @@ def test_group_component_var(prices_table, grouped_positions_table):
     )
 
     # test component var
-    component_var = calculator.group_component_var(QUANTILE)
+    component_var = calculator.component_var(QUANTILE)
     assert np.isclose(component_var['Fund 1'], 0.060499, rtol=TOL)
     assert np.isclose(component_var['Fund 2'], 0.060499, rtol=TOL)
 
@@ -46,6 +46,6 @@ def test_group_incremental_var(prices_table, grouped_positions_table):
     )
 
     # test isolated group calculators
-    incremental_var = calculator.group_incremental_var(QUANTILE)
+    incremental_var = calculator.incremental_var(QUANTILE)
     assert np.isclose(incremental_var['Fund 1'], -0.0063395, rtol=TOL)
     assert np.isclose(incremental_var['Fund 2'], -0.004973, rtol=TOL)

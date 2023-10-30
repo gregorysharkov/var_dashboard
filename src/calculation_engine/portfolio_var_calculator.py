@@ -1,5 +1,6 @@
 '''module contains portfolio var calculator'''
 
+import logging
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any
@@ -7,6 +8,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+
+logger = logging.getLogger(__name__)
 
 QUANTILES = {
     '95': norm.ppf(0.95),
@@ -54,12 +57,14 @@ class PortfolioVarCalculator:
     def incremental_var(self, quantile: float) -> pd.Series:
         '''returns all incremental vars for each asset'''
 
-        return pd.Series(
+        return_series = pd.Series(
             {
                 ticker: self._ticker_incremental_var(ticker, quantile)
                 for ticker in self._var_tickers
             }
         )
+        return_series.index.name = 'VaRTicker'
+        return return_series
 
     @cached_property
     def _positions(self) -> pd.DataFrame:
@@ -104,7 +109,9 @@ class PortfolioVarCalculator:
     @cached_property
     def _position_std(self) -> pd.Series:
         '''returns standard deviation of the portfolio positions'''
-        return self._position_returns.std()
+        return_series = self._position_returns.std()
+        return_series.index.name = 'VaRTicker'
+        return return_series
 
     @cached_property
     def _isolated_calculators(self) -> dict[str, Any]:

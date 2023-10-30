@@ -1,7 +1,7 @@
 '''ectention of PortfolioVarCalculator allowing to group positions'''
 
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cache, cached_property
 from typing import Any
 
 import pandas as pd
@@ -88,9 +88,15 @@ class GroupVarCalculator:
                 @ group_exposure
             ) ** .5
             group_stds[group] = fund_std
+
+        group_stds.index.name = self.group_column
         return group_stds
 
-    def group_isolated_var(self, quantile) -> pd.Series:
+    def portfolio_var(self, quantile: float) -> float:
+        '''returns the overal portfolio variable'''
+        return self.portfolio_var_calculator.portfolio_var(quantile)
+
+    def isolated_var(self, quantile) -> pd.Series:
         '''
         returns isolated var for given quantile
         Output should be something like this
@@ -100,7 +106,7 @@ class GroupVarCalculator:
         '''
         return self._iso_fund_stds.apply(lambda x: x * quantile)
 
-    def group_component_var(self, quantile) -> pd.Series:
+    def component_var(self, quantile) -> pd.Series:
         '''
         returns component var for given quantile
         Output should be something like this
@@ -110,10 +116,10 @@ class GroupVarCalculator:
         because combined weight of each fund is .5
         '''
         fund_weights = self._group_weights.groupby(level=0).sum()
-        return self.portfolio_var_calculator.portfolio_var(quantile) \
+        return self.portfolio_var(quantile) \
             * fund_weights
 
-    def group_incremental_var(self, quantile) -> pd.Series:
+    def incremental_var(self, quantile) -> pd.Series:
         '''
         returns incremental var for given quantile
         Output should be something like this
@@ -128,6 +134,7 @@ class GroupVarCalculator:
                 group=group,
                 quantile=quantile,
             )
+        incremental_var.index.name = self.group_column
         return incremental_var
 
     @cached_property
@@ -157,5 +164,5 @@ class GroupVarCalculator:
 
     def _group_incremental_var(self, group, quantile) -> pd.Series:
         '''returns incremental var for given quantile'''
-        return self.portfolio_var_calculator.portfolio_var(quantile) \
+        return self.portfolio_var(quantile) \
             - self._isolated_group_calculators[group].portfolio_var(quantile)
