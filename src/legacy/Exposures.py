@@ -17,6 +17,8 @@ NON_OPTION_TYPES = [
     "common", "reit", "fund", "mlp", "adr",
 ]
 
+FUND_NAME_ALIAS = 'Strat'
+
 
 def filter_exposure_calc(
     filter: Dict,
@@ -118,7 +120,8 @@ def filter_exposure_calc(
 
 
 def filter_beta_adj_exposure_calc(
-    filter: Dict, position: pd.DataFrame,
+    filter: Dict,
+    position: pd.DataFrame,
     factor_betas: pd.DataFrame,
     firm_nav: float
 ) -> pd.DataFrame:
@@ -135,7 +138,7 @@ def filter_beta_adj_exposure_calc(
             # aggregate long exposures with same RFID;
             aggregations = {
                 "TradeDate": "first",
-                "FundName": "first",
+                FUND_NAME_ALIAS: "first",
                 "VaRTicker": "first",
                 "Exposure": "sum",
             }
@@ -148,9 +151,9 @@ def filter_beta_adj_exposure_calc(
                 .agg(aggregations)\
                 .reset_index()
 
-            long_exposure_calc = calculate_long_exposure(
+            long_exposure_calc = calculate_beta_adjusted_exposure(
                 equity_mkt_beta, long_exposure_tmp)
-            short_exposure_calc = calculate_short_exposure(
+            short_exposure_calc = calculate_beta_adjusted_exposure(
                 equity_mkt_beta, short_exposure_tmp)
             gross_exposure_calc = long_exposure_calc + abs(short_exposure_calc)
             net_exposure_calc = long_exposure_calc + short_exposure_calc
@@ -242,26 +245,46 @@ def calculate_short_exposure(equity_mkt_beta, short_exposure_tmp) -> float:
     return short_exposure_calc
 
 
-def calculate_long_exposure(equity_mkt_beta, long_exposure_tmp) -> float:
-    if long_exposure_tmp.empty:
+def calculate_beta_adjusted_exposure(equity_mkt_beta, exposure_table) -> float:
+    '''doscstring goes here...'''
+
+    if exposure_table.empty:
         return 0
 
-    unique_tickers = list(long_exposure_tmp["VaRTicker"].unique())
-    equity_mkt_beta_group = equity_mkt_beta.loc[
-        equity_mkt_beta["ID"].isin(unique_tickers)
-    ]
-    equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
-    long_exposure_tmp["beta_adj_exposure"] = (
-        equity_mkt_beta_group.values *
-        long_exposure_tmp["Exposure"]
-    )
-    long_exposure_calc = long_exposure_tmp["beta_adj_exposure"].sum()
-    return long_exposure_calc
+    return_data = exposure_table\
+        .reset_index()\
+        .merge(
+            equity_mkt_beta
+            .reset_index()
+            .rename(columns={'ID': 'VaRTicker'})
+            [['VaRTicker', "SPX Index"]],
+            on='VaRTicker',
+            how='inner'
+        )
+
+    return_data['beta_adj_exposure'] = return_data['Exposure'] * \
+        return_data['SPX Index']
+
+    return_value = return_data["beta_adj_exposure"].sum()
+
+    return return_value
+
+    # unique_tickers = list(long_exposure_tmp["VaRTicker"].unique())
+    # equity_mkt_beta_group = equity_mkt_beta.loc[
+    #     equity_mkt_beta["ID"].isin(unique_tickers)
+    # ]
+    # equity_mkt_beta_group = equity_mkt_beta_group["SPX Index"]
+    # long_exposure_tmp["beta_adj_exposure"] = (
+    #     equity_mkt_beta_group.values *
+    #     long_exposure_tmp["Exposure"]
+    # )
+    # long_exposure_calc = long_exposure_tmp["beta_adj_exposure"].sum()
+    # return long_exposure_calc
 
 
 def filter_options_delta_adj_exposure(position: pd.DataFrame) -> pd.DataFrame:
     options_exposure_calc_dict = {}
-    position_grouped = position.groupby("FundName")
+    position_grouped = position.groupby(FUND_NAME_ALIAS)
     for strat_name, strat_group in position_grouped:
         expiry_grouped = strat_group.groupby(["Expiry"])
         for expiry_date, expiry_group in expiry_grouped:
@@ -343,7 +366,7 @@ def filter_options_delta_unadj_exposure(position: pd.DataFrame) -> pd.DataFrame:
     options_exposure_delta1_calc_dict = {}
     position["delta_1_exposure"] = (
         1 / abs(position["Delta"])) * position["Exposure"]
-    position_grouped = position.groupby("FundName")
+    position_grouped = position.groupby(FUND_NAME_ALIAS)
     for strat_name, strat_group in position_grouped:
         expiry_grouped = strat_group.groupby(["Expiry"])
         for expiry_date, expiry_group in expiry_grouped:
@@ -433,7 +456,7 @@ def filter_options_premium(position: pd.DataFrame) -> pd.DataFrame:
         * position["MarketPrice"]
         * position["PX_POS_MULT_FACTOR"]
     )
-    position_grouped = position.groupby("FundName")
+    position_grouped = position.groupby(FUND_NAME_ALIAS)
     for strat_name, strat_group in position_grouped:
         expiry_grouped = strat_group.groupby(["Expiry"])
         for expiry_date, expiry_group in expiry_grouped:
@@ -503,7 +526,7 @@ def filter_options_premium(position: pd.DataFrame) -> pd.DataFrame:
 
 def greek_sensitivities(position: pd.DataFrame) -> pd.DataFrame:
     greek_sensitivities_dict = {}
-    position_grouped = position.groupby("FundName")
+    position_grouped = position.groupby(FUND_NAME_ALIAS)
     for strat_name, strat_group in position_grouped:
         expiry_grouped = strat_group.groupby(["Expiry"])
         for expiry_date, expiry_group in expiry_grouped:
@@ -577,7 +600,7 @@ def factor_decomp_filtered(
         .agg(
             {
                 "TradeDate": "first",
-                "FundName": "first",
+                FUND_NAME_ALIAS: "first",
                 "UnderlierName": "first",
                 "VaRTicker": "first",
                 "MarketValue": "sum",
@@ -587,37 +610,50 @@ def factor_decomp_filtered(
         .reset_index()
     )
     factor_vol = np.sqrt(
-        pd.Series(np.diag(matrix_cov.iloc[1:, 1:]),
-                  index=factor_betas.columns[1:])
-    )
+        pd.Series(
+            np.diag(matrix_cov),
+            index=factor_betas.drop('ID', axis=1).columns
+        )
+    )  # type: ignore
     macro_factor_df = factor.loc[factor["factor_group"]
                                  == "macro"][["Factor Names"]]
     sector_factor_df = factor.loc[factor["factor_group"]
                                   == "sector"][["Factor Names"]]
     date = factor_prices.index[-1]
     factor_decomp_dict = {}
-    position_grouped = position.groupby("FundName")
+    position_grouped = position.groupby(FUND_NAME_ALIAS)
     factor_vol_df = pd.DataFrame(
         factor_vol.values, index=factor_vol.index, columns=["FactorVol"]
     )
     for strat_name, strat_group in position_grouped:
         if isinstance(strat_name, tuple):
             strat_name = strat_name[0]
-        tmp = (
-            strat_group.groupby(
-                [
-                    "RFID",
-                ]
-            )
-            .agg({"VaRTicker": "first", "Exposure": "sum"})
+
+        temp = strat_group\
+            .groupby('VaRTicker')\
+            .agg({'Exposure': 'sum'})\
             .reset_index()
-        )
-        exposure = tmp["Exposure"].values
-        fund_positions = tmp["VaRTicker"]
-        factor_betas_fund = factor_betas.loc[factor_betas["ID"].isin(
-            fund_positions)]
-        strat_factor_exp = exposure[:,
-                                    None].T @ factor_betas_fund.values[:, 1:]
+
+        # tmp = strat_group\
+        #     .groupby("RFID")\
+        #     .agg({"VaRTicker": "first", "Exposure": "sum"})\
+        #     .reset_index()
+
+        # shape (3,1)
+        exposure = temp.set_index(temp.VaRTicker).Exposure.values
+        # tmp["Exposure"].values
+        fund_positions = temp["VaRTicker"].unique()
+        fund_factor_betas = factor_betas\
+            .loc[factor_betas.ID.isin(fund_positions), :]\
+            .set_index('ID')
+
+        # factor_betas_fund = factor_betas\
+        #     .loc[
+        #         factor_betas["VaRTicker"].isin(fund_positions)
+        #     ]
+        strat_factor_exp = exposure[:, None].T\
+            @ fund_factor_betas.values
+        # @ factor_betas_fund.values[:, 1:]
         factor_decomp_dict[f"{strat_name}"] = strat_factor_exp[0, :]
     factor_decomp_df = pd.DataFrame(factor_decomp_dict, index=factor_vol.index)
     date_vector = pd.DataFrame(
@@ -631,7 +667,7 @@ def factor_decomp_filtered(
         factor_decomp_df.iloc[:, 1:-1].sum(axis=1) / firm_NAV.values[0]
     )
     factor_decomp_df.reset_index(inplace=True)
-    factor_decomp_df.rename(columns={"index": "FactorID"}, inplace=True)
+    factor_decomp_df.rename(columns={"factor": "FactorID"}, inplace=True)
     factor_decomp_df = pd.merge(
         factor_decomp_df,
         factor[["Factor Names"]],
@@ -685,7 +721,7 @@ def factor_decomp_by_factor_position(
         .agg(
             {
                 "TradeDate": "first",
-                "FundName": "first",
+                FUND_NAME_ALIAS: "first",
                 "UnderlierName": "first",
                 "VaRTicker": "first",
                 "MarketValue": "sum",
@@ -717,7 +753,7 @@ def factor_decomp_by_factor_position(
                 axis=1,
             ),
             columns=[f"{col} - Top 10", "Exposure", "FactorExp"],
-            index=factor_betas.index,
+            index=factor_beta_exposure.index,  # factor_betas.index,
         )
         risk_factor_exposure_sorted = risk_factor_exposure.sort_values(
             ["Exposure"], ascending=[False]
@@ -770,7 +806,7 @@ def factor_heat_map(
         .agg(
             {
                 "TradeDate": "first",
-                "FundName": "first",
+                FUND_NAME_ALIAS: "first",
                 "UnderlierName": "first",
                 "VaRTicker": "first",
                 "MarketValue": "sum",
@@ -786,22 +822,18 @@ def factor_heat_map(
     # loop through column by column
     risk_factor_exposure_df_list = []
     for col in factor_beta_exposure.columns[1: len(factor_betas.columns)]:
+
+        underlier_names = factor_beta_exposure["UnderlierName"]
+        beta_exposures = factor_beta_exposure[col] * \
+            factor_beta_exposure["Exposure"] / firm_NAV.values[0]
+        exposures = factor_beta_exposure["Exposure"] / firm_NAV.values[0]
+
         risk_factor_exposure = pd.DataFrame(
-            np.concatenate(
-                (
-                    factor_beta_exposure["UnderlierName"].values[:, None],
-                    (
-                        factor_beta_exposure[col] *
-                        factor_beta_exposure["Exposure"]
-                    ).values[:, None]
-                    / firm_NAV.values[:, None],
-                    factor_beta_exposure["Exposure"].values[:, None]
-                    / firm_NAV.values[:, None],
-                ),
-                axis=1,
-            ),
-            columns=["Position", f"{col}", "Exposure"],
-            index=factor_betas.index,
+            {
+                'Position': underlier_names,
+                f"{col}": beta_exposures,
+                'Exposure': exposures
+            }
         )
         risk_factor_exposure_df_list.append(risk_factor_exposure)
     LOGGER.info(

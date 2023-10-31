@@ -2,7 +2,6 @@
 module contains functions required to generate
 output tables for the final report
 '''
-
 import pandas as pd
 
 COLUMN_MAPPING = {
@@ -103,3 +102,40 @@ def _flattern_column_names(data: pd.DataFrame) -> pd.DataFrame:
         return_columns.append(combined_column_name)
     data.columns = return_columns
     return data
+
+
+def generate_group_var_report(
+    var_data: pd.DataFrame,
+    group: str
+) -> pd.DataFrame:
+    '''generates a var report for a given group'''
+
+    selected_var_data = var_data.loc[
+        (var_data.group == group) &
+        (var_data.var_type.isin(COLUMN_MAPPING))
+    ]
+
+    return_data = pd.pivot_table(
+        selected_var_data,
+        index='attribute',
+        values='var',
+        columns=['var_type', 'var_confidence'],
+    )
+
+    return_data = _flattern_column_names(return_data)\
+        .reset_index()\
+        .rename(columns={'attribute': group.capitalize()})\
+        .set_index(group.capitalize())
+
+    return_data = _format_output_columns(return_data)
+    return return_data
+
+
+def generate_group_var_reports(var_data: pd.DataFrame, groups: list[str]) -> dict[str, pd.DataFrame]:
+    '''generates a var report for a given group'''
+
+    return_data = {}
+    for group in groups:
+        return_data[group] = generate_group_var_report(var_data, group)
+
+    return return_data

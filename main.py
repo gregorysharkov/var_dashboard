@@ -1,5 +1,4 @@
-# pylint: disable=E501
-import json
+# pylint: disable=E501,W0621,C0114,C0301
 import logging
 import warnings
 from argparse import ArgumentParser
@@ -16,9 +15,13 @@ import src.legacy.pnl_stats as pnl_stats
 import src.legacy.VaR as var
 import src.legacy.var_utils as var_utils
 import src.report_sheets as rsh
+from src.calculation_engine.constants import GROUP_LEVELS
 from src.calculation_engine.var_calculator import calculate_vars
 from src.legacy.helper import calculate_returns, imply_smb_gmv
-from src.reporting_engine.var_reports import generate_underlier_report
+from src.reporting_engine.var_reports import (
+    generate_group_var_reports,
+    generate_underlier_report,
+)
 
 # Filter out the FutureWarning
 warnings.filterwarnings(
@@ -77,14 +80,14 @@ def parse_arguments():
     parser.add_argument(
         "--holdings_date",
         type=str,
-        default="2023-08-10",
+        default="2023-10-09",
         help="holdings date of postions across investment advisor",
     )
-    args = parser.parse_args()
-    return args
+    parsed_args = parser.parse_args()
+    return parsed_args
 
 
-def parse_price_vol_shock_range(args):
+def parse_price_vol_shock_range():
     '''parses a price volatility from args'''
 
     # price_vol_shock_range = args.price_vol_shock_range
@@ -130,7 +133,7 @@ def calculate_global_returns(price: pd. DataFrame) -> pd.DataFrame:
 
 if __name__ == "__main__":
     args = parse_arguments()
-    price_vol_shock_range = parse_price_vol_shock_range(args)
+    price_vol_shock_range = parse_price_vol_shock_range()
     holdings_date = parse_holdings_date(args)
 
     # 1. Read in factors, prices, positions, AUM
@@ -197,46 +200,39 @@ if __name__ == "__main__":
     market_trading_days_range = market_trading_days_range.index.strftime(
         "%Y-%m-%d")
 
-    # for now need to process positions and force a distinct RFID for each distinct symbol
+    # for now need to process positions and force a
+    # distinct RFID for each distinct symbol
     logger.info(
         "process positions and force a distinct RFID for each distinct symbol")
     cols = position.columns[~position.columns.isin(["RFID"])]
     position = position[cols]
     position_group = position.groupby("VaRTicker")
     position["RFID"] = position_group.cumcount() + 1
-    # position_group = position.groupby("VaRTicker")
-    # count = 0
-    # position_group_df_list = []
-    # for name, group in position_group:
-    #     count += 1
-    #     group["RFID"] = count
-    #     position_group_df_list.append(group)
-    # position = pd.concat(position_group_df_list, axis=0)
     position["Exposure"] = position["Exposure"].astype(float)
     position.TradeDate = pd.to_datetime(
         position.TradeDate,
         format=r'%Y-%m-%d',  # r'%m/%d/%Y'
     ).dt.date
 
-    # var_data = calculate_vars(prices=price, positions=position)
-    # var_data.to_excel('output/var_data.xlsx')
-    # structure positions, factor, price data for subsequent estimation of Factor
+    # structure positions, factor, price data for subsequent
+    # estimation of Factor
     # betas, vars, Exposures, and Stress Tests
     # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
     # TODO: MAKE IT PARAMETRISABLE
-    # price.index = pd.to_datetime(price.index).strftime("%Y-%m-%d")
-    # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 25)]
+    # position = position.loc[(position["RFID"] > 0) & (position["RFID"] < 10)]
     factor_names = list(factor["Factor Names"])
     factor_names = [name for name in factor_names if str(name) != "nan"]
-    factor_ids_full = list(factor["FactorID"])
+    complete_factor_ids = list(factor["FactorID"])
     factors_to_remove = ["RIY less RTY", "RAG less RAV"]
     factor_ids = [
-        item for item in factor_ids_full if item not in factors_to_remove]
+        item for item in complete_factor_ids if item not in factors_to_remove]
     factor_prices = price[factor_ids]
-    factor_ids = factor_ids_full
+
+    factor_ids = complete_factor_ids
     factors_to_remove = ["RIY Index", "RTY Index", "RAG Index", "RAV Index"]
     factor_ids = [item for item in factor_ids if item not in factors_to_remove]
     factor = factor.loc[factor["FactorID"].isin(factor_ids)]
+
     position_ids = list(position["VaRTicker"].unique())
     position_prices = price[position_ids]
 
@@ -246,36 +242,25 @@ if __name__ == "__main__":
     country_filters = position["Country"].unique()
     mcap_filters = position["MarketCap"].unique()
     filters_dict = {
-        "FundName": strat_filters,
+        "Strat": strat_filters,
         "Sector": sector_filters,
         "Industry": industry_filters,
         "Country": country_filters,
-        "MarketCap.1": mcap_filters,
+        "MarketCap": mcap_filters,
     }
 
     # logger.info("review input data")
 
     # 1.a. estimate factor betas, factor vols
-    # logger.info('Calculating factor betas')
+    logger.info('Calculating factor betas')
     factor_returns = calculate_returns(factor_prices)
     factor_returns = imply_smb_gmv(factor_returns)
     position_returns = calculate_returns(position_prices)
-    # logger.info('Done with position returns estimation')
+    logger.info('Done with position returns estimation')
 
-    # beta_calculator = BetasCalculator(position_prices, factor_prices)
-    # print(beta_calculator.calculate_beta_factors())
     factor_betas = fac.calculate_position_betas(
         factor_returns, position_returns)
     logger.info('Done with factor betas estimation')
-
-    # calculate fund returns
-    # global_factor_returns = calculate_global_returns(price)
-    # logger.info('Done with global returns estimation')
-
-    # group returns by fund
-    # global_position_returns = global_factor_returns\
-    #     .merge(position, on=['TradeDate', 'VaRTicker'])
-    # logger.info('Done with factor returns estimation')
 
     # 1.b. var functions
     # Create a Pandas Excel writer using XlsxWriter as the engine.
@@ -289,17 +274,6 @@ if __name__ == "__main__":
     matrix_cov = var_utils.covariance_matrix(factor_returns)
     decay_cov = var_utils.decay_covariance_matrix(factor_returns)
 
-    # var_exposures = var.filter_var(
-    #     positions_returns=position,
-    #     betas=factor_betas,
-    #     matrix_cov=matrix_cov,
-    #     firm_nav=firm_nav[holdings_date],
-    #     quantiles=['95', '99'],
-    #     filter_item='VaRTicker',
-    # )
-    # var_top10 = var_exposures.sort_values('position_VaR95').iloc[:10]
-    # var_bottom10 = var_exposures.sort_values('position_VaR95').iloc[-10:]
-
     var_data = calculate_vars(prices=price, positions=position)
     var_data.to_excel('output/var_data.xlsx')
 
@@ -310,40 +284,53 @@ if __name__ == "__main__":
         var_data, ascending=True
     )
 
+    group_var_reports = generate_group_var_reports(
+        var_data, list(GROUP_LEVELS.keys())
+    )
+
+    # Excel equivalent ["varReport; "Strat var", "Sector var", "Industry var",
+    # "Country var", "Market Cap var" tbls]
+    var_structured_strat = group_var_reports.get('fund')
+    var_structured_sector = group_var_reports.get('sector')
+    var_structured_industry = group_var_reports.get('industry')
+    var_structured_country = group_var_reports.get('country')
+    var_structured_mcap = group_var_reports.get('mktcap')
+
+    # # 1.c Stress Test functions
+    # Excel equivalent ["Options&Stress;
+    # "Beta & Volatility Stress Test P&L tbl"]
     filter_items = {
-        'position': 'VaRTicker',
-        'fund': 'FundName',
+        # 'position': 'VaRTicker',
+        'fund': 'Strat',
         'sector': 'Sector',
         'industry': 'Industry',
         'country': 'Country',
         'mktcap': 'MarketCap',
     }
-
-    # Excel equivalent ["varReport; "Strat var", "Sector var", "Industry var",
-    # "Country var", "Market Cap var" tbls]
-
-    # # 1.c Stress Test functions
-    # Excel equivalent ["Options&Stress; "Beta & Volatility Stress Test P&L tbl"]
-    stress_test_beta_price_vol_calc = var.filter_stress_test_beta_price_vol(
-        filter_items, factor_prices, position, factor_betas, price_vol_shock_range
-    )
-    stress_test_beta_price_vol_results_df = var.stress_test_structuring(
-        stress_test_beta_price_vol_calc, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test P&L tbl"]
-    (
-        stress_test_price_vol_calc,
-        stress_test_price_vol_exposure_calc,
-    ) = var.filter_stress_test_price_vol(
-        filters_dict, factor_prices, position, price_vol_shock_range
-    )
-    # Excel equivalent ["Options&Stress; "Price & Volatility Stress Test Net Exposure tbl"]
-    stress_test_price_vol_results_df = var.stress_test_structuring(
-        stress_test_price_vol_calc, position, price_vol_shock_range
-    )
-    stress_test_price_vol_exposure_results_df = var.stress_test_structuring(
-        stress_test_price_vol_exposure_calc, position, price_vol_shock_range
-    )
+    # stress_test_beta_price_vol_calc = var.filter_stress_test_beta_price_vol(
+    #     filter_items, factor_prices, position,
+    #     factor_betas, price_vol_shock_range
+    # )
+    # stress_test_beta_price_vol_results_df = var.stress_test_structuring(
+    #     stress_test_beta_price_vol_calc,
+    #     position, price_vol_shock_range
+    # )
+    # Excel equivalent ["Options&Stress;
+    # "Price & Volatility Stress Test P&L tbl"]
+    # (
+    #     stress_test_price_vol_calc,
+    #     stress_test_price_vol_exposure_calc,
+    # ) = var.filter_stress_test_price_vol(
+    #     filters_dict, factor_prices, position, price_vol_shock_range
+    # )
+    # Excel equivalent ["Options&Stress;
+    # "Price & Volatility Stress Test Net Exposure tbl"]
+    # stress_test_price_vol_results_df = var.stress_test_structuring(
+    #     stress_test_price_vol_calc, position, price_vol_shock_range
+    # )
+    # stress_test_price_vol_exposure_results_df = var.stress_test_structuring(
+    #     stress_test_price_vol_exposure_calc, position, price_vol_shock_range
+    # )
 
     # 1.d Exposure functions
     # Excel equivalent ["ExpReport"]
@@ -365,24 +352,28 @@ if __name__ == "__main__":
         filters_dict, position, factor_betas, firm_nav
     )
     # Excel equivalent ["Options&Stress"; "Option Exposure" tbl]
-    options_delta_adj_exposure_calc = Exposures.filter_options_delta_adj_exposure(
-        position
-    )
+    options_delta_adj_exposure_calc = Exposures\
+        .filter_options_delta_adj_exposure(
+            position
+        )
     # Excel equivalent ["Options&Stress"; "Option Notional" tbl]
-    options_delta1_exposure_calc = Exposures.filter_options_delta_unadj_exposure(
-        position
-    )
+    options_delta1_exposure_calc = Exposures\
+        .filter_options_delta_unadj_exposure(
+            position
+        )
     # Excel equivalent ["Options&Stress"; "Premium" tbl]
     options_premium_calc = Exposures.filter_options_premium(position)
     # Excel equivalent ["Options&Stress"; "Greek Sensitivity" tbl]
     greek_sensitivities_calc = Exposures.greek_sensitivities(position)
-    # Excel equivalent ["FactorExposures"; "Macro Factor Sensitivity" tbl & "Sector
-    # Sensitivities" tbl]
-    macro_factor_decomp_df, sector_factor_decomp_df = Exposures.factor_decomp_filtered(
-        position, factor_betas, factor_prices, factor, matrix_cov, firm_nav
-    )
-    # Excel equivalent ["FactorExposures"; "Top10" tbls & "Bottom10" tbls by Factor
-    # Exposure by Position]
+    # Excel equivalent ["FactorExposures"; "Macro Factor Sensitivity" tbl
+    # & "Sector Sensitivities" tbl]
+    macro_factor_decomp_df, sector_factor_decomp_df = Exposures\
+        .factor_decomp_filtered(
+            position, factor_betas, factor_prices,
+            factor, matrix_cov, firm_nav
+        )
+    # Excel equivalent ["FactorExposures"; "Top10" tbls & "Bottom10"
+    # tbls by Factor, Exposure by Position]
     (
         risk_factor_exposure_top_N_list,
         risk_factor_exposure_bottom_N_list,
@@ -407,9 +398,8 @@ if __name__ == "__main__":
         columns=["SPX Index"],
         index=factor_prices.index,
     )
-    aum_clean = pd.merge(
-        aum_clean, factor_rets["SPX Index"], left_index=True, right_index=True
-    )
+    # , left_index=True, right_index=True
+    aum_clean = aum_clean.join(factor_rets["SPX Index"])
     # Excel equivalents ["PNLReport"]
     return_analysis_stats = pnl_stats.return_analysis(aum_clean)
     comparative_analysis_stats = pnl_stats.comparative_statistics(
@@ -417,24 +407,20 @@ if __name__ == "__main__":
     )
 
     # 1.f. dashboard
-    # Excel equivalents ["Dashboard; "Fund Exposure %" tbl; "Fund Exposures $" tbl]
+    # Excel equivalents
+    # ["Dashboard; "Fund Exposure %" tbl; "Fund Exposures $" tbl]
     # fund exposure % tbl
     position_agg_exposure = (
-        position.groupby(
-            [
-                "RFID",
-            ]
-        )
-        .agg(
-            {
-                "TradeDate": "first",
-                "FundName": "first",
-                "UnderlierName": "first",
-                "VarTicker": "first",
-                "MarketValue": "sum",
-                "Exposure": "sum",
-            }
-        )
+        position
+        .groupby("RFID")
+        .agg({
+            "TradeDate": "first",
+            "Strat": "first",
+            "UnderlierName": "first",
+            "VaRTicker": "first",
+            "MarketValue": "sum",
+            "Exposure": "sum",
+        })
         .reset_index()
     )
     long_mkt_value_pct = tmp = (
@@ -462,27 +448,28 @@ if __name__ == "__main__":
                 "Market Value",
             ],
             "Long": [
-                sector_exposure_df["Long"].sum(),
-                sector_beta_adj_exposure_df["Long"].sum(),
+                sector_exposure_df["Long"].sum(),  # type: ignore
+                sector_beta_adj_exposure_df["Long"].sum(),  # type: ignore
                 long_mkt_value_pct,
             ],
             "Short": [
-                sector_exposure_df["Short"].sum(),
-                sector_beta_adj_exposure_df["Short"].sum(),
+                sector_exposure_df["Short"].sum(),  # type: ignore
+                sector_beta_adj_exposure_df["Short"].sum(),  # type: ignore
                 short_mkt_value_pct,
             ],
             "Gross": [
-                sector_exposure_df["Gross"].sum(),
-                sector_beta_adj_exposure_df["Gross"].sum(),
+                sector_exposure_df["Gross"].sum(),  # type: ignore
+                sector_beta_adj_exposure_df["Gross"].sum(),  # type: ignore
                 gross_mkt_value_pct,
             ],
             "Net": [
-                sector_exposure_df["Net"].sum(),
-                sector_beta_adj_exposure_df["Net"].sum(),
+                sector_exposure_df["Net"].sum(),  # type: ignore
+                sector_beta_adj_exposure_df["Net"].sum(),  # type: ignore
                 net_mkt_value_pct,
             ],
         }
     )
+    nav_value = firm_nav.values[0]
     fund_exp_usd_dashboard = pd.DataFrame(
         {
             "Fund Exposures $": [
@@ -491,25 +478,27 @@ if __name__ == "__main__":
                 "Market Value",
             ],
             "Long": [
-                sector_exposure_df["Long"].sum() * firm_nav.values[0],
-                sector_beta_adj_exposure_df["Long"].sum() * firm_nav.values[0],
+                sector_exposure_df["Long"].sum() * nav_value,  # type: ignore
+                sector_beta_adj_exposure_df["Long"].sum(  # type: ignore
+                ) * nav_value,  # type: ignore
                 long_mkt_value,
             ],
             "Short": [
-                sector_exposure_df["Short"].sum() * firm_nav.values[0],
-                sector_beta_adj_exposure_df["Short"].sum(
-                ) * firm_nav.values[0],
+                sector_exposure_df["Short"].sum() * nav_value,  # type: ignore
+                sector_beta_adj_exposure_df["Short"].sum(  # type: ignore
+                ) * nav_value,  # type: ignore
                 short_mkt_value,
             ],
             "Gross": [
-                sector_exposure_df["Gross"].sum() * firm_nav.values[0],
-                sector_beta_adj_exposure_df["Gross"].sum(
-                ) * firm_nav.values[0],
+                sector_exposure_df["Gross"].sum() * nav_value,  # type: ignore
+                sector_beta_adj_exposure_df["Gross"].sum(  # type: ignore
+                ) * nav_value,  # type: ignore
                 gross_mkt_value,
             ],
             "Net": [
-                sector_exposure_df["Net"].sum() * firm_nav.values[0],
-                sector_beta_adj_exposure_df["Net"].sum() * firm_nav.values[0],
+                sector_exposure_df["Net"].sum() * nav_value,  # type: ignore
+                sector_beta_adj_exposure_df["Net"].sum(  # type: ignore
+                ) * nav_value,  # type: ignore
                 net_mkt_value,
             ],
         }
@@ -534,7 +523,7 @@ if __name__ == "__main__":
     rsh.generate_pnldata_sheet(
         writer,
         data_dict={
-            'aum_clean': aum_clean,
+            'aum_clean': aum_clean.dropna(),
         }
     )
 
@@ -588,44 +577,41 @@ if __name__ == "__main__":
         ]
     )
     # mktcap_exposure_df.to_csv(r'data/mktcap_exposure_df.csv', sep=';')
-    # rsh.generate_var_report_sheet(
-    #     writer,
-    #     data=[
-    #         {
-    #             'var_top10': var_top10,
-    #             'var_bottom10': var_bottom10,
-    #         },
-    #         {
-    #             'Strat var': var_structured_strat.fillna(0),
-    #             'Sector var': var_structured_sector.fillna(0),
-    #             'Industry var': var_structured_industry.fillna(0),
-    #             'Country var': var_structured_country.fillna(0),
-    #             'MarketCap var': var_structured_mcap.fillna(0),
-    #         },
-    #     ]
-    # )
-
-    rsh.generate_options_stress_sheet(
+    rsh.generate_var_report_sheet(
         writer,
         data=[
             {
-                'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
-                'options_delta1_exposure_calc': options_delta1_exposure_calc,
-                # .set_index('Greek Sensitivity'),
-                'greek_sensitivities_calc': greek_sensitivities_calc,
-                'options_premium_calc': options_premium_calc.set_index('Premium'),
+                'var_top10': top_var_contributors,
+                'var_bottom10': top_var_diversifiers,
             },
             {
-                'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
-                'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
-                'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+                'Strat var': var_structured_strat.fillna(0),
+                'Sector var': var_structured_sector.fillna(0),
+                'Industry var': var_structured_industry.fillna(0),
+                'Country var': var_structured_country.fillna(0),
+                'MarketCap var': var_structured_mcap.fillna(0),
             },
-            stress_test_price_vol_exposure_results_df,
         ]
     )
-    drop_columns = ['Dollar Delta', 'Dollar Gamma 1%',
-                    'Dollar Vega 1%', 'Dollar Theta 1D']
 
+    # rsh.generate_options_stress_sheet(
+    #     writer,
+    #     data=[
+    #         {
+    #             'options_delta_adj_exposure_calc': options_delta_adj_exposure_calc,
+    #             'options_delta1_exposure_calc': options_delta1_exposure_calc,
+    #             # .set_index('Greek Sensitivity'),
+    #             'greek_sensitivities_calc': greek_sensitivities_calc,
+    #             'options_premium_calc': options_premium_calc.set_index('Premium'),
+    #         },
+    #         {
+    #             'stress_test_beta_price_vol_results_df': stress_test_beta_price_vol_results_df,
+    #             'stress_test_price_vol_results_df': stress_test_price_vol_results_df,
+    #             'stress_test_price_vol_exposure_results_df': stress_test_price_vol_exposure_results_df,
+    #         },
+    #         stress_test_price_vol_exposure_results_df,
+    #     ]
+    # )
     rsh.generate_positions_summary_sheet(
         writer,
         position_summary,  # type: ignore

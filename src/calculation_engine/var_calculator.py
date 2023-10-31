@@ -19,6 +19,7 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 from src.calculation_engine import GroupVarCalculator, PortfolioVarCalculator
+from src.calculation_engine.constants import GROUP_LEVELS
 
 # from tqdm import tqdm
 
@@ -28,16 +29,6 @@ logger = logging.getLogger(__name__)
 QUANTILES = {
     '95': norm.ppf(.95),
     '99': norm.ppf(.99),
-}
-
-# 'position': 'VaRTicker', # no group needed
-GROUP_LEVELS = {
-    'position': 'Positions',
-    'fund': 'Strat',
-    'sector': 'Sector',
-    'industry': 'Industry',
-    'country': 'Country',
-    'mktcap': 'MarketCap',
 }
 
 OUTPUT_COLUMNS = ['strat', 'var_type',
