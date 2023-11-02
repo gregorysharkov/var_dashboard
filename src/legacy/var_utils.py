@@ -25,7 +25,7 @@ def multiply_matrices(
         .dot(factor_betas_t)\
         .T
     # .dot(exposure)
-    return (position_exposure ** .5)
+    return position_exposure ** .5
 
 
 def correlation_matrix(

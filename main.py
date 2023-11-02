@@ -20,6 +20,7 @@ from src.calculation_engine.var_calculator import calculate_vars
 from src.legacy.helper import calculate_returns, imply_smb_gmv
 from src.reporting_engine.var_reports import (
     generate_group_var_reports,
+    generate_short_uderlier_report,
     generate_underlier_report,
 )
 
@@ -41,6 +42,20 @@ logger.setLevel(logging.INFO)
 logging.getLogger().handlers.clear()
 
 now = datetime.utcnow().strftime("%Y%m%d")
+
+
+IBIS_FUNDS = [
+    'S2_C-IBIS',
+    'S2_M-IBIS',
+    'S2_IPO_IBIS',
+    'S2_IBIS45_NEWPARADIGM',
+    'S2_IBIS27_ALLERMUIR',
+    'S2_IBIS11_HAGERTY',
+    'S2_IBIS38_CROBERTSON',
+    'S2_IBIS23_GSMITH',
+    'S2_IBIS123_GISONDI',
+    'S2_IBIS111_HIGHATLAS',
+]
 
 
 def get_market_trading_days(start_date: str, end_date: str) -> pd.DataFrame:
@@ -185,9 +200,8 @@ if __name__ == "__main__":
         inplace=True
     )
 
-    aum = pd.read_excel("data/Historical Pnl and Nav.xlsx")
-    # AUM = pd.read_csv("data/Historical Pnl and Nav.csv",
-    #                   sep=';', decimal='.',)
+    aum = pd.read_excel(r"data\Historical Pnl and Nav.xlsx")
+    aum = aum[aum.Fund.isin(IBIS_FUNDS)]
     aum_clean = pnl_stats.clean_nav(aum)  # model NAVs
     firm_nav = aum_clean.loc[aum_clean.index == holdings_date]["EndBookNAV"]
 
@@ -281,6 +295,14 @@ if __name__ == "__main__":
         var_data, ascending=False
     )
     top_var_diversifiers = generate_underlier_report(
+        var_data, ascending=True
+    )
+
+    short_var_contributors = generate_short_uderlier_report(
+        var_data, ascending=False
+    )
+
+    short_var_diversifiers = generate_short_uderlier_report(
         var_data, ascending=True
     )
 
@@ -581,8 +603,8 @@ if __name__ == "__main__":
         writer,
         data=[
             {
-                'var_top10': top_var_contributors,
-                'var_bottom10': top_var_diversifiers,
+                'var_top10': short_var_contributors,
+                'var_bottom10': short_var_diversifiers,
             },
             {
                 'Strat var': var_structured_strat.fillna(0),

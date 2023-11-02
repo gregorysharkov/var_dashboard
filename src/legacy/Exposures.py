@@ -797,6 +797,7 @@ def factor_heat_map(
     factor = factor.reindex(index=factor_betas.columns[1:])
     factor_betas.columns = [factor_betas.columns[0]] + list(factor.index)
     # agg positions by exposure across fund strats
+
     position_agg_exposure = (
         position.groupby(
             [
@@ -821,7 +822,7 @@ def factor_heat_map(
     )
     # loop through column by column
     risk_factor_exposure_df_list = []
-    for col in factor_beta_exposure.columns[1: len(factor_betas.columns)]:
+    for col in factor_beta_exposure.columns[1:]:
 
         underlier_names = factor_beta_exposure["UnderlierName"]
         beta_exposures = factor_beta_exposure[col] * \

@@ -104,6 +104,7 @@ def MDD_Abs(X):
 
 
 def clean_nav(aum: pd.DataFrame) -> pd.DataFrame:
+    '''clean aum data and calculate returns'''
 
     clean_aum = convert_aum_columns(aum)
     daily_nav_agg = clean_aum\

@@ -16,6 +16,7 @@ N_ROWS = 10
 def generate_underlier_report(
     var_data: pd.DataFrame,
     ascending: bool = False,
+    sort_column: str = 'Comp95',
 ) -> pd.DataFrame:
     '''
     funtion generates top or bottom var underlier contrinutions
@@ -36,7 +37,7 @@ def generate_underlier_report(
     return_data = _format_output_columns(return_data)
     return_data = return_data\
         .reset_index()\
-        .sort_values('Comp95', ascending=ascending, axis=0)\
+        .sort_values(sort_column, ascending=ascending, axis=0)\
         .set_index('Positions')
 
     axis_name = 'Top10 VaR Diversifiers' \
@@ -44,6 +45,22 @@ def generate_underlier_report(
 
     return_data = return_data.rename_axis(axis_name)
     return return_data.head(N_ROWS)
+
+
+def generate_short_uderlier_report(
+    var_data: pd.DataFrame,
+    ascending: bool = False,
+) -> pd.DataFrame:
+    '''formats short var report'''
+
+    return_data = generate_underlier_report(
+        var_data=var_data,
+        ascending=ascending,
+        sort_column='Iso95'
+    )[['Iso95', 'Iso99']]\
+        .rename(columns={'Iso95': 'VaR95', 'Iso99': 'VaR99'})
+
+    return return_data
 
 
 def _format_var_data(

@@ -22,12 +22,13 @@ def generate_var_report_sheet(writer, data: List[Dict]) -> None:
     report_tables = []
     report_charts = []
 
+    var_top10 = data[0].get('var_top10')
+    var_bottom10 = data[0].get('var_bottom10')
     first_row_tables = rgo.init_report_group(
         styles=styles,
         table_names=['var_top10', 'var_bottom10'],
         tables=[
-            data[0].get('var_top10'),
-            data[0].get('var_bottom10')
+            var_top10, var_bottom10
         ],  # type: ignore
         inner_snap_mode=SnapType.RIGHT,
         inner_margin=2,

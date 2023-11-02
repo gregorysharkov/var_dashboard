@@ -37,6 +37,8 @@ def _adjust_table(table: pd.DataFrame) -> pd.DataFrame:
     table = _add_window_std(table, '20D Volatility', 20)
     table = _add_volatility_budget(table, 'Volatility Budget')
     table.rename({'ret': 'Daily Return'}, axis=1, inplace=True)
+    table.dropna(inplace=True)
+    table.to_excel('output/pnl_data.xlsx')
 
     return table
 
@@ -64,7 +66,7 @@ def _add_window_std(
         data.loc[i, col_name] = data.ret[:i+1].std()
 
     data[col_name].fillna(0, inplace=True)
-    data.set_index('index', inplace=True)
+    data.set_index('PeriodEndDate', inplace=True)
     return data
 
 
